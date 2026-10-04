@@ -61,6 +61,13 @@ function formatFriendlyDate(dateStr) {
   });
 }
 
+function maskPolicyNumber(policyNumber) {
+  if (!policyNumber) return 'XXXX-XXXX';
+  const clean = String(policyNumber).trim();
+  if (clean.length <= 4) return `XXXX-${clean}`;
+  return `XXXX-XXXX-${clean.slice(-4)}`;
+}
+
 export function buildModernBirthdayEmailHtml(policyholder) {
   const age = calculateAge(policyholder.date_of_birth);
   const formattedDob = formatFriendlyDate(policyholder.date_of_birth);
@@ -179,7 +186,7 @@ export function buildModernBirthdayEmailHtml(policyholder) {
                           🔹 <strong>Policy Number:</strong>
                         </td>
                         <td style="padding-bottom: 10px; font-size: 14px; font-weight: 700; color: #0f172a;" width="55%">
-                          ${policyholder.policy_number}
+                          ${maskPolicyNumber(policyholder.policy_number)} <span style="font-size: 11px; font-weight: 500; color: #64748b; margin-left: 4px;">(Masked for Security)</span>
                         </td>
                       </tr>
                       <tr>

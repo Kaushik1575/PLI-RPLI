@@ -1,5 +1,5 @@
 import { Client, AgentProfile, EmailTemplate } from '../types';
-import { calculateAge, formatFriendlyDate } from './dateUtils';
+import { calculateAge, formatFriendlyDate, maskPolicyNumber } from './dateUtils';
 
 function calculateTenure(openingDate?: string): string {
   if (!openingDate) return 'Active Policy';
@@ -32,7 +32,7 @@ export function generateBirthdayEmailHtml(
   const replaceTags = (str: string): string => {
     return str
       .replace(/{client_name}/g, client.name)
-      .replace(/{policy_no}/g, client.policy_number)
+      .replace(/{policy_no}/g, maskPolicyNumber(client.policy_number))
       .replace(/{policy_type}/g, client.policy_type)
       .replace(/{birth_date}/g, formattedDob)
       .replace(/{age}/g, age ? String(age) : '')
@@ -154,7 +154,7 @@ export function generateBirthdayEmailHtml(
                           🔹 <strong>Policy Number:</strong>
                         </td>
                         <td style="padding-bottom: 10px; font-size: 14px; font-weight: 700; color: #0f172a;" width="55%">
-                          ${client.policy_number}
+                          ${maskPolicyNumber(client.policy_number)} <span style="font-size: 11px; font-weight: 500; color: #64748b; margin-left: 4px;">(Masked for Security)</span>
                         </td>
                       </tr>
                       <tr>

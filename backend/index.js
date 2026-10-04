@@ -78,6 +78,18 @@ function calculateTenure(openingDate) {
 }
 
 /**
+ * Masks a policy number for security in customer emails.
+ * Only the last 4 characters/digits are shown, preceded by XXXX-XXXX-
+ * Example: "PLI-OD-2023-887410" -> "XXXX-XXXX-7410"
+ */
+function maskPolicyNumber(policyNumber) {
+  if (!policyNumber) return 'XXXX-XXXX';
+  const clean = String(policyNumber).trim();
+  if (clean.length <= 4) return `XXXX-${clean}`;
+  return `XXXX-XXXX-${clean.slice(-4)}`;
+}
+
+/**
  * Builds HTML Email Template for Amulya Kumar Das & Sasmita Das with India Post Logo & Milestone
  */
 function buildBirthdayEmailHtml(policyholder) {
@@ -198,7 +210,7 @@ function buildBirthdayEmailHtml(policyholder) {
                           🔹 <strong>Policy Number:</strong>
                         </td>
                         <td style="padding-bottom: 10px; font-size: 14px; font-weight: 700; color: #0f172a;" width="55%">
-                          ${policyholder.policy_number}
+                          ${maskPolicyNumber(policyholder.policy_number)} <span style="font-size: 11px; font-weight: 500; color: #64748b; margin-left: 4px;">(Masked for Security)</span>
                         </td>
                       </tr>
                       <tr>

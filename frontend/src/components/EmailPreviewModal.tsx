@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Send, Smartphone, Monitor, RefreshCw, CheckCircle2, ShieldCheck, Mail } from 'lucide-react';
 import { Client, AgentProfile, EmailTemplate } from '../types';
 import { generateBirthdayEmailHtml } from '../utils/emailGenerator';
+import { maskPolicyNumber } from '../utils/dateUtils';
 
 interface EmailPreviewModalProps {
   isOpen: boolean;
@@ -55,7 +56,7 @@ export const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
                 Email Preview: Birthday Greeting for {client.name}
               </h3>
               <p className="text-xs text-slate-500 font-mono">
-                To: {client.email} • Policy: {client.policy_number}
+                To: {client.email} • Policy: {maskPolicyNumber(client.policy_number)}
               </p>
             </div>
           </div>

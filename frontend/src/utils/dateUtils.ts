@@ -83,3 +83,18 @@ export function sortClientsByUpcomingBirthday(clients: Client[]): Client[] {
     return getDaysUntilBirthday(a.date_of_birth) - getDaysUntilBirthday(b.date_of_birth);
   });
 }
+
+/**
+ * Masks a policy number for security in customer emails.
+ * Only the last 4 characters/digits are shown, preceded by XXXX-XXXX-
+ * Example: "PLI-OD-2023-887410" -> "XXXX-XXXX-7410"
+ */
+export function maskPolicyNumber(policyNumber?: string): string {
+  if (!policyNumber) return 'XXXX-XXXX';
+  const clean = String(policyNumber).trim();
+  if (clean.length <= 4) {
+    return `XXXX-${clean}`;
+  }
+  const lastFour = clean.slice(-4);
+  return `XXXX-XXXX-${lastFour}`;
+}
