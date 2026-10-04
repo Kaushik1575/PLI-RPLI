@@ -59,8 +59,11 @@ export const App: React.FC = () => {
     return saved ? JSON.parse(saved) : INITIAL_LOGS;
   });
 
-  const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-  const envSupabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+  const DEFAULT_SUPABASE_URL = 'https://qcbbhyxtacpxpnyjqygj.supabase.co';
+  const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjYmJoeXh0YWNweHBueWpxeWdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5MjAyODksImV4cCI6MjEwNjQ5NjI4OX0.d8f_UjpJiiXrjAGSH1-0qJpc6yu03oZ0tgR_-0ct6PU';
+
+  const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const envSupabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
   const envResendKey = import.meta.env.VITE_RESEND_API_KEY || '';
 
   const [resendConfig, setResendConfig] = useState<ResendSettings>(() => {
@@ -79,8 +82,8 @@ export const App: React.FC = () => {
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseSettings>(() => {
     const saved = localStorage.getItem('dakpost_supabase');
     const parsed = saved ? JSON.parse(saved) : null;
-    const url = envSupabaseUrl || parsed?.url || '';
-    const key = envSupabaseKey || parsed?.anon_key || '';
+    const url = (parsed?.url && parsed.url.trim() !== '') ? parsed.url : envSupabaseUrl;
+    const key = (parsed?.anon_key && parsed.anon_key.trim() !== '') ? parsed.anon_key : envSupabaseKey;
     return {
       url: url,
       anon_key: key,
