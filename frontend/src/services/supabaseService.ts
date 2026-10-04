@@ -82,35 +82,78 @@ export async function fetchPolicyholdersFromSupabase(url: string, anonKey: strin
   }
 }
 
+/**
+ * Normalizes any date string (DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD, or ISO string)
+ * into PostgreSQL's standard 'YYYY-MM-DD' format.
+ */
+export function normalizeDateForDatabase(dateStr?: string | null): string | null {
+  if (!dateStr || dateStr.trim() === '') return null;
+  const clean = dateStr.trim().split('T')[0];
+
+  // Already YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) {
+    return clean;
+  }
+
+  // DD/MM/YYYY or DD-MM-YYYY
+  const dmyMatch = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+  if (dmyMatch) {
+    const day = dmyMatch[1].padStart(2, '0');
+    const month = dmyMatch[2].padStart(2, '0');
+    const year = dmyMatch[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  // Fallback Date parser
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
+  return null;
+}
+
 // Insert single policyholder
 export async function insertPolicyholderToSupabase(
   url: string, 
   anonKey: string, 
   clientData: Omit<Client, 'id' | 'created_at'>
-): Promise<string | null> {
+): Promise<{ id: string | null; error: string | null }> {
   const client = getSupabaseClient(url, anonKey);
-  if (!client) return null;
+  if (!client) return { id: null, error: 'Database not connected' };
 
   try {
+    const dob = normalizeDateForDatabase(clientData.date_of_birth);
+    if (!dob) {
+      return { id: null, error: 'Please enter a valid Date of Birth.' };
+    }
+    const opening = normalizeDateForDatabase(clientData.policy_opening_date);
+    const phoneClean = clientData.phone && clientData.phone.trim() !== '+91' && clientData.phone.trim() !== '+91 '
+      ? clientData.phone.trim() 
+      : null;
+
     const { data, error } = await client.from('policyholders').insert([{
-      name: clientData.name,
-      policy_number: clientData.policy_number,
-      policy_category: clientData.policy_category,
+      name: clientData.name.trim(),
+      policy_number: clientData.policy_number.trim().toUpperCase(),
+      policy_category: clientData.policy_category || 'PLI',
       policy_type: clientData.policy_type,
-      date_of_birth: clientData.date_of_birth,
-      email: clientData.email,
-      policy_opening_date: clientData.policy_opening_date || null,
-      phone: clientData.phone || null,
+      date_of_birth: dob,
+      email: clientData.email.trim(),
+      policy_opening_date: opening,
+      phone: phoneClean,
     }]).select('id').single();
 
     if (error) {
       console.error('Supabase insert error:', error.message);
-      return null;
+      return { id: null, error: error.message };
     }
-    return data?.id || null;
-  } catch (err) {
+    return { id: data?.id || null, error: null };
+  } catch (err: any) {
     console.error('Supabase insert error:', err);
-    return null;
+    return { id: null, error: err?.message || 'Failed to save to database' };
   }
 }
 
@@ -134,33 +177,39 @@ export async function updatePolicyholderInSupabase(
   url: string,
   anonKey: string,
   clientData: Client
-): Promise<boolean> {
+): Promise<{ success: boolean; error: string | null }> {
   const client = getSupabaseClient(url, anonKey);
-  if (!client) return false;
+  if (!client) return { success: false, error: 'Database not connected' };
 
   try {
+    const dob = normalizeDateForDatabase(clientData.date_of_birth);
+    const opening = normalizeDateForDatabase(clientData.policy_opening_date);
+    const phoneClean = clientData.phone && clientData.phone.trim() !== '+91' && clientData.phone.trim() !== '+91 '
+      ? clientData.phone.trim() 
+      : null;
+
     const { error } = await client
       .from('policyholders')
       .update({
-        name: clientData.name,
-        policy_number: clientData.policy_number,
-        policy_category: clientData.policy_category,
+        name: clientData.name.trim(),
+        policy_number: clientData.policy_number.trim().toUpperCase(),
+        policy_category: clientData.policy_category || 'PLI',
         policy_type: clientData.policy_type,
-        date_of_birth: clientData.date_of_birth,
-        email: clientData.email,
-        policy_opening_date: clientData.policy_opening_date || null,
-        phone: clientData.phone || null,
+        date_of_birth: dob,
+        email: clientData.email.trim(),
+        policy_opening_date: opening,
+        phone: phoneClean,
       })
       .eq('id', clientData.id);
 
     if (error) {
       console.error('Supabase update error:', error.message);
-      return false;
+      return { success: false, error: error.message };
     }
-    return true;
-  } catch (err) {
+    return { success: true, error: null };
+  } catch (err: any) {
     console.error('Supabase update policyholder error:', err);
-    return false;
+    return { success: false, error: err?.message || 'Update failed' };
   }
 }
 

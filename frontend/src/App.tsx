@@ -36,7 +36,9 @@ export const App: React.FC = () => {
     if (saved) {
       try {
         const parsed: Client[] = JSON.parse(saved);
-        return parsed.filter(c => !c.id.startsWith('cli-'));
+        // Clean out only obsolete hardcoded mock IDs (1 to 8), preserve all real policyholders
+        const obsoleteMockIds = new Set(['cli-1', 'cli-2', 'cli-3', 'cli-4', 'cli-5', 'cli-6', 'cli-7', 'cli-8']);
+        return parsed.filter(c => !obsoleteMockIds.has(c.id));
       } catch {
         return [];
       }
@@ -147,8 +149,13 @@ export const App: React.FC = () => {
 
     // Push to Supabase policyholders table if connected
     if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
-      const sbId = await insertPolicyholderToSupabase(supabaseConfig.url, supabaseConfig.anon_key, clientData);
-      if (sbId) createdId = sbId;
+      const res = await insertPolicyholderToSupabase(supabaseConfig.url, supabaseConfig.anon_key, clientData);
+      if (res.error) {
+        showToast(`Database error: ${res.error}`, 'error');
+        alert(`Could not save to Supabase database: ${res.error}`);
+        return;
+      }
+      if (res.id) createdId = res.id;
     }
 
     const newClient: Client = {
@@ -170,7 +177,10 @@ export const App: React.FC = () => {
     });
 
     if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
-      await updatePolicyholderInSupabase(supabaseConfig.url, supabaseConfig.anon_key, updatedClient);
+      const res = await updatePolicyholderInSupabase(supabaseConfig.url, supabaseConfig.anon_key, updatedClient);
+      if (res.error) {
+        showToast(`Database update warning: ${res.error}`, 'error');
+      }
     }
 
     showToast(`Updated policyholder details for ${updatedClient.name}!`, 'success');
