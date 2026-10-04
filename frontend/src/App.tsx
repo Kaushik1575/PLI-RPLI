@@ -30,10 +30,18 @@ import {
 } from './services/supabaseService';
 
 export const App: React.FC = () => {
-  // Persistent State
+  // Persistent State (strictly real policyholders, filtering out any legacy mock data)
   const [clients, setClients] = useState<Client[]>(() => {
     const saved = localStorage.getItem('dakpost_clients_v2');
-    return saved ? JSON.parse(saved) : INITIAL_CLIENTS;
+    if (saved) {
+      try {
+        const parsed: Client[] = JSON.parse(saved);
+        return parsed.filter(c => !c.id.startsWith('cli-'));
+      } catch {
+        return [];
+      }
+    }
+    return [];
   });
 
   const [agent, setAgent] = useState<AgentProfile>(() => {
@@ -90,8 +98,9 @@ export const App: React.FC = () => {
   useEffect(() => {
     if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
       fetchPolicyholdersFromSupabase(supabaseConfig.url, supabaseConfig.anon_key).then((data) => {
-        if (data && data.length > 0) {
+        if (data) {
           setClients(data);
+          localStorage.setItem('dakpost_clients_v2', JSON.stringify(data));
         }
       });
     }
