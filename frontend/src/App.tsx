@@ -99,13 +99,27 @@ export const App: React.FC = () => {
   const [isSendingBulk, setIsSendingBulk] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // Sync with Supabase single policyholders table if connected
+  // Two-way sync: fetches all policyholders from Supabase and automatically pushes any local-only clients to Supabase
   useEffect(() => {
     if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
-      fetchPolicyholdersFromSupabase(supabaseConfig.url, supabaseConfig.anon_key).then((data) => {
-        if (data) {
-          setClients(data);
-          localStorage.setItem('dakpost_clients_v2', JSON.stringify(data));
+      fetchPolicyholdersFromSupabase(supabaseConfig.url, supabaseConfig.anon_key).then(async (serverData) => {
+        if (serverData) {
+          // Detect any clients stored locally that are not yet in Supabase
+          const serverPolicyNos = new Set(serverData.map(c => c.policy_number.toUpperCase()));
+          const localOnly = clients.filter(c => !serverPolicyNos.has(c.policy_number.toUpperCase()));
+
+          if (localOnly.length > 0) {
+            console.log(`Auto-uploading ${localOnly.length} local-only policyholders to Supabase...`);
+            for (const localClient of localOnly) {
+              await insertPolicyholderToSupabase(supabaseConfig.url, supabaseConfig.anon_key, localClient);
+            }
+            const refreshed = await fetchPolicyholdersFromSupabase(supabaseConfig.url, supabaseConfig.anon_key);
+            setClients(refreshed);
+            localStorage.setItem('dakpost_clients_v2', JSON.stringify(refreshed));
+          } else {
+            setClients(serverData);
+            localStorage.setItem('dakpost_clients_v2', JSON.stringify(serverData));
+          }
         }
       });
     }
