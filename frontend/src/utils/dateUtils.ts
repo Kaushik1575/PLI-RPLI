@@ -5,6 +5,13 @@ import { Client } from '../types';
  */
 export function isBirthdayToday(dateOfBirth: string, refDate: Date = new Date()): boolean {
   if (!dateOfBirth) return false;
+  const clean = String(dateOfBirth).trim().split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    return day === refDate.getDate() && month === refDate.getMonth();
+  }
   const dob = new Date(dateOfBirth);
   return (
     dob.getDate() === refDate.getDate() &&
@@ -18,17 +25,29 @@ export function isBirthdayToday(dateOfBirth: string, refDate: Date = new Date())
  */
 export function getDaysUntilBirthday(dateOfBirth: string, refDate: Date = new Date()): number {
   if (!dateOfBirth) return 999;
-  const dob = new Date(dateOfBirth);
-  const currentYear = refDate.getFullYear();
+  const clean = String(dateOfBirth).trim().split('T')[0];
+  const parts = clean.split('-');
+  let birthMonth: number;
+  let birthDay: number;
 
-  let nextBday = new Date(currentYear, dob.getMonth(), dob.getDate());
+  if (parts.length === 3 && parts[0].length === 4) {
+    birthMonth = parseInt(parts[1], 10) - 1;
+    birthDay = parseInt(parts[2], 10);
+  } else {
+    const dob = new Date(dateOfBirth);
+    birthMonth = dob.getMonth();
+    birthDay = dob.getDate();
+  }
+
+  const currentYear = refDate.getFullYear();
+  let nextBday = new Date(currentYear, birthMonth, birthDay);
   
   // Set times to midnight for accurate day difference
   nextBday.setHours(0, 0, 0, 0);
   const today = new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate());
 
   if (nextBday.getTime() < today.getTime()) {
-    nextBday = new Date(currentYear + 1, dob.getMonth(), dob.getDate());
+    nextBday = new Date(currentYear + 1, birthMonth, birthDay);
   }
 
   const diffTime = nextBday.getTime() - today.getTime();

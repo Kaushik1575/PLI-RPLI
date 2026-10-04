@@ -5,15 +5,36 @@ let cachedClient: SupabaseClient | null = null;
 let cachedUrl = '';
 let cachedKey = '';
 
+/**
+ * Robustly sanitizes and extracts a valid Supabase project URL,
+ * preventing corrupted strings where URLs get concatenated repeatedly.
+ */
+export function cleanSupabaseUrl(url?: string | null): string {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  const match = trimmed.match(/https?:\/\/[a-z0-9_-]+\.supabase\.co/i);
+  if (match) return match[0];
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    const secondHttp = trimmed.indexOf('http', 7);
+    if (secondHttp !== -1) {
+      return trimmed.slice(0, secondHttp);
+    }
+    return trimmed;
+  }
+  return trimmed;
+}
+
 export function getSupabaseClient(url: string, anonKey: string): SupabaseClient | null {
-  if (!url || !anonKey) return null;
-  if (cachedClient && cachedUrl === url && cachedKey === anonKey) {
+  const sanitizedUrl = cleanSupabaseUrl(url);
+  const sanitizedKey = (anonKey || '').trim();
+  if (!sanitizedUrl || !sanitizedKey) return null;
+  if (cachedClient && cachedUrl === sanitizedUrl && cachedKey === sanitizedKey) {
     return cachedClient;
   }
   try {
-    cachedClient = createClient(url, anonKey);
-    cachedUrl = url;
-    cachedKey = anonKey;
+    cachedClient = createClient(sanitizedUrl, sanitizedKey);
+    cachedUrl = sanitizedUrl;
+    cachedKey = sanitizedKey;
     return cachedClient;
   } catch (err) {
     console.error('Error creating Supabase client:', err);

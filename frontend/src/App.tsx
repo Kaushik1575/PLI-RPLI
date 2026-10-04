@@ -26,7 +26,8 @@ import {
   insertPolicyholderToSupabase, 
   updateBirthdayWishSentInSupabase, 
   updatePolicyholderInSupabase,
-  deletePolicyholderFromSupabase 
+  deletePolicyholderFromSupabase,
+  cleanSupabaseUrl
 } from './services/supabaseService';
 
 export const App: React.FC = () => {
@@ -84,8 +85,23 @@ export const App: React.FC = () => {
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseSettings>(() => {
     const saved = localStorage.getItem('dakpost_supabase');
     const parsed = saved ? JSON.parse(saved) : null;
-    const url = (parsed?.url && parsed.url.trim() !== '') ? parsed.url : envSupabaseUrl;
-    const key = (parsed?.anon_key && parsed.anon_key.trim() !== '') ? parsed.anon_key : envSupabaseKey;
+    const rawUrl = (parsed?.url && parsed.url.trim() !== '') ? parsed.url : envSupabaseUrl;
+    const url = cleanSupabaseUrl(rawUrl) || cleanSupabaseUrl(envSupabaseUrl);
+    const key = (parsed?.anon_key && parsed.anon_key.trim() !== '') ? parsed.anon_key.trim() : envSupabaseKey.trim();
+
+    // Auto-heal localStorage if corrupted URL was saved earlier
+    if (parsed && (parsed.url !== url || parsed.anon_key !== key)) {
+      try {
+        localStorage.setItem('dakpost_supabase', JSON.stringify({
+          url: url,
+          anon_key: key,
+          is_connected: Boolean(url && key)
+        }));
+      } catch (e) {
+        // ignore localStorage access issues
+      }
+    }
+
     return {
       url: url,
       anon_key: key,
