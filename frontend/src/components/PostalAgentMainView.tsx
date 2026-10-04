@@ -1184,7 +1184,7 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                         Celebration Today
                       </span>
                       <span className="text-xs font-bold text-slate-600">
-                        {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                        {formatFriendlyDate(new Date().toISOString())}
                       </span>
                     </div>
                     <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5">
@@ -1369,7 +1369,7 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
                         <Cake className="w-3.5 h-3.5 text-amber-500" />
-                        <span>3. Date of Birth (DOB) *</span>
+                        <span>3. Date of Birth (DD/MM/YYYY) *</span>
                         <span className="text-[10px] text-amber-700 font-semibold">(Wishes trigger on this date)</span>
                       </label>
                       <input
@@ -1426,7 +1426,7 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1.5 flex items-center gap-1.5">
                         <Calendar className="w-3.5 h-3.5 text-slate-600" />
-                        <span>6. Policy Opening Date *</span>
+                        <span>6. Policy Opening Date (DD/MM/YYYY) *</span>
                       </label>
                       <input
                         type="date"
@@ -1645,7 +1645,7 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Date of Birth (DOB) *
+                    Date of Birth (DD/MM/YYYY) *
                   </label>
                   <input
                     type="date"
@@ -1674,7 +1674,7 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Policy Opening Date
+                    Policy Opening Date (DD/MM/YYYY)
                   </label>
                   <input
                     type="date"

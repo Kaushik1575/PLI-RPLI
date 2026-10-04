@@ -47,15 +47,24 @@ function calculateAge(dateOfBirth) {
 
 /**
  * Formats Friendly Date like "15 Aug 1988"
+/**
+ * Formats any date string strictly into DD/MM/YYYY format.
+ * Example: "2005-10-05" -> "05/10/2005"
  */
 function formatFriendlyDate(dateStr) {
   if (!dateStr) return '';
+  const clean = String(dateStr).trim().split('T')[0];
+  const parts = clean.split('-');
+  if (parts.length === 3 && parts[0].length === 4) {
+    const [y, m, d] = parts;
+    return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
+  }
   const d = new Date(dateStr);
-  return d.toLocaleDateString('en-IN', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
+  if (isNaN(d.getTime())) return String(dateStr);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
 }
 
 /**

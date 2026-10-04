@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { History, Search, CheckCircle2, AlertTriangle, Clock, Trash2, Mail, ExternalLink } from 'lucide-react';
 import { EmailLog } from '../types';
+import { formatFriendlyDate } from '../utils/dateUtils';
 
 interface DeliveryLogsProps {
   logs: EmailLog[];
@@ -108,7 +109,7 @@ export const DeliveryLogs: React.FC<DeliveryLogsProps> = ({ logs, onClearLogs })
                 filteredLogs.map((log) => {
                   const date = new Date(log.sent_at);
                   const formattedTime = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-                  const formattedDate = date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+                  const formattedDate = formatFriendlyDate(log.sent_at);
 
                   return (
                     <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">

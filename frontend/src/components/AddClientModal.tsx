@@ -168,7 +168,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-red-400" />
-                Date of Birth (DOB) *
+                Date of Birth (DD/MM/YYYY) *
               </label>
               <input
                 type="date"
@@ -218,7 +218,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
               <Calendar className="w-3.5 h-3.5 text-amber-400" />
-              Policy Opening Date (Date of Commencement) *
+              Policy Opening Date (DD/MM/YYYY) *
             </label>
             <input
               type="date"
