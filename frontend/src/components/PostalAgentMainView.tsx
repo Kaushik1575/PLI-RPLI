@@ -310,30 +310,32 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
         </div>
 
         {/* Top Official Strip */}
-        <div className="bg-[#b91c1c] text-white text-[11px] font-semibold px-3 sm:px-6 py-1.5 flex items-center justify-between shadow-xs">
-          <div className="flex items-center gap-2">
-            <span className="bg-amber-400 text-red-950 px-2.5 py-0.5 rounded font-black text-[9px] sm:text-[10px] tracking-wide uppercase shadow-xs flex items-center gap-1.5">
-              <IndianFlag className="w-4 h-3 rounded-[2px]" />
-              <span>डाक विभाग &bull; DEPARTMENT OF POSTS</span>
+        <div className="bg-[#b91c1c] text-white text-[10px] sm:text-[11px] font-semibold px-2.5 sm:px-6 py-1 sm:py-1.5 flex items-center justify-between shadow-xs overflow-hidden flex-nowrap">
+          <div className="flex items-center gap-1.5 shrink-0 min-w-0">
+            <span className="bg-amber-400 text-red-950 px-2 py-0.5 rounded font-black text-[9px] sm:text-[10px] tracking-wide uppercase shadow-xs flex items-center gap-1 shrink-0 whitespace-nowrap">
+              <IndianFlag className="w-3.5 h-2.5 sm:w-4 sm:h-3 rounded-[2px]" />
+              <span className="sm:hidden">डाक विभाग &bull; INDIA POST</span>
+              <span className="hidden sm:inline">डाक विभाग &bull; DEPARTMENT OF POSTS</span>
             </span>
-            <span className="hidden sm:inline text-red-100 text-[11px]">
+            <span className="hidden md:inline text-red-100 text-[11px] truncate">
               Government of India &bull; Postal Life Insurance
             </span>
           </div>
-          <div className="flex items-center gap-2 bg-red-900/90 border border-red-700/60 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold text-amber-300">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>6:00 AM IST Auto-Dispatch Active</span>
+          <div className="flex items-center gap-1.5 bg-red-900/90 border border-red-700/60 px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[11px] font-bold text-amber-300 shrink-0 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span className="sm:hidden">6 AM Auto Active</span>
+            <span className="hidden sm:inline">6:00 AM IST Auto-Dispatch Active</span>
           </div>
         </div>
 
         {/* Main Navigation Bar */}
-        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 py-2.5 sm:py-3 flex items-center justify-between gap-2">
           
-          <div className="flex items-center gap-3">
-            {/* Hamburger Button (Large touch target for parents with text label) */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            {/* Hamburger Button (Large touch target with label) */}
             <button
               onClick={() => setIsHamburgerOpen(!isHamburgerOpen)}
-              className="px-2.5 sm:px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 transition-colors focus:outline-none touch-target flex items-center gap-1.5 border border-slate-200"
+              className="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 hover:bg-slate-200 active:bg-slate-300 text-slate-800 transition-colors focus:outline-none touch-target flex items-center gap-1.5 border border-slate-200 shrink-0"
               title="Open Navigation Menu"
               aria-label="Navigation Menu"
             >
@@ -348,28 +350,45 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                 (e.target as HTMLImageElement).src = '/POSTOFFICELOGO.jpg';
               }}
               alt="India Post Logo" 
-              className="w-11 h-11 rounded-xl object-contain shadow-sm border border-red-200 bg-white p-0.5"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-contain shadow-xs border border-red-200 bg-white p-0.5 shrink-0"
             />
 
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight leading-none flex items-center gap-1.5">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight leading-none flex items-center gap-1">
                   DakPost <span className="text-red-600 font-extrabold">PLI</span>
                 </h1>
-                <IndianFlag className="w-6 h-4 hidden sm:inline-block" />
+                <IndianFlag className="w-4 h-3 sm:w-6 sm:h-4 inline-block" />
               </div>
-              <p className="text-[11px] sm:text-xs text-slate-500 font-semibold truncate max-w-[200px] sm:max-w-none mt-0.5">
-                {agent.agent_name} &bull; <span className="text-red-700 font-bold">Postal Life Insurance</span>
+              <p className="text-[10px] sm:text-xs text-slate-500 font-semibold truncate max-w-[160px] xs:max-w-[200px] sm:max-w-none mt-0.5">
+                {agent.agent_name} &bull; <span className="text-red-700 font-bold">PLI Agent</span>
               </p>
             </div>
           </div>
 
           {/* Quick Header Right Actions */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700">
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Desktop Full Badge */}
+            <div className="hidden sm:flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-700">
               <span className="text-red-700">📁 Policies: {clients.length}</span>
               <span className="text-slate-300">|</span>
               <span className="text-amber-700">🎂 Today: {todayBirthdays.length}</span>
+            </div>
+
+            {/* Mobile Compact Badges (Never overlaps or spills off-screen) */}
+            <div className="flex sm:hidden items-center gap-1.5">
+              <button
+                onClick={() => setActiveTab('today')}
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold border flex items-center gap-1 ${
+                  todayBirthdays.length > 0
+                    ? 'bg-amber-100 text-amber-900 border-amber-300 shadow-xs'
+                    : 'bg-slate-100 text-slate-600 border-slate-200'
+                }`}
+                title="Today's Birthdays"
+              >
+                <span>🎂</span>
+                <span className="font-extrabold">{todayBirthdays.length}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1092,21 +1111,21 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                 <Shield className="w-48 h-48 text-white" />
               </div>
 
-              <div className="relative p-5 sm:p-7 md:p-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-5">
-                  <div className="space-y-2.5">
+              <div className="relative p-4 sm:p-7 md:p-8">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
+                  <div className="space-y-1.5 sm:space-y-2.5">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400 text-red-950 font-black text-[10px] sm:text-xs tracking-wider uppercase shadow-xs">
-                        <IndianFlag className="w-5 h-3.5 shadow-xs" />
-                        <span>DAK VIBHAG &bull; GOVT. OF INDIA</span>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full bg-amber-400 text-red-950 font-black text-[9px] sm:text-xs tracking-wider uppercase shadow-xs">
+                        <IndianFlag className="w-4 h-2.5 sm:w-5 sm:h-3.5 shadow-xs" />
+                        <span>GOVT. OF INDIA &bull; DAK VIBHAG</span>
                       </span>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600/60 border border-red-400/30 text-red-100 text-[11px] font-semibold">
+                      <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600/60 border border-red-400/30 text-red-100 text-[11px] font-semibold">
                         <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                         <span>6:00 AM IST Auto-Dispatch Active</span>
                       </span>
                     </div>
 
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight">
+                    <h1 className="text-xl sm:text-3xl md:text-4xl font-black text-white tracking-tight leading-tight">
                       Postal Life Insurance Portal
                     </h1>
 
@@ -1115,36 +1134,36 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                     </p>
                   </div>
 
-                  {/* Quick Stat Badges */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 shrink-0">
-                    <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-3 text-center">
-                      <div className="text-[10px] uppercase font-bold text-red-200">Total Policies</div>
-                      <div className="text-2xl sm:text-3xl font-black text-white mt-0.5">{clients.length}</div>
+                  {/* Balanced 3-Column Stat Badges on All Screen Sizes */}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 shrink-0 pt-1 sm:pt-0">
+                    <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center">
+                      <div className="text-[9px] sm:text-[10px] uppercase font-bold text-red-200">Policies</div>
+                      <div className="text-lg sm:text-3xl font-black text-white mt-0.5">{clients.length}</div>
                     </div>
 
                     <div 
                       onClick={() => setActiveTab('today')}
-                      className={`rounded-2xl p-3 text-center cursor-pointer transition-all border ${
+                      className={`rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center cursor-pointer transition-all border ${
                         todayBirthdays.length > 0 
-                          ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-lg shadow-amber-500/20 scale-105' 
+                          ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-md shadow-amber-500/20 scale-105' 
                           : 'bg-white/10 backdrop-blur-md border-white/15 text-white'
                       }`}
                       title="View Today's Celebrations"
                     >
-                      <div className={`text-[10px] uppercase font-bold ${todayBirthdays.length > 0 ? 'text-slate-900' : 'text-red-200'}`}>
-                        Today's Birthdays
+                      <div className={`text-[9px] sm:text-[10px] uppercase font-bold ${todayBirthdays.length > 0 ? 'text-slate-900' : 'text-red-200'}`}>
+                        Birthdays
                       </div>
-                      <div className="text-2xl sm:text-3xl font-black mt-0.5 flex items-center justify-center gap-1">
+                      <div className="text-lg sm:text-3xl font-black mt-0.5 flex items-center justify-center gap-1">
                         <span>🎂</span>
                         <span>{todayBirthdays.length}</span>
                       </div>
                     </div>
 
-                    <div className="col-span-2 sm:col-span-1 bg-white/10 backdrop-blur-md border border-white/15 rounded-2xl p-3 text-center">
-                      <div className="text-[10px] uppercase font-bold text-red-200">Automation</div>
-                      <div className="text-xs font-black text-emerald-300 mt-1 flex items-center justify-center gap-1">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                        <span>Daily 6 AM</span>
+                    <div className="bg-white/10 backdrop-blur-md border border-white/15 rounded-xl sm:rounded-2xl p-2 sm:p-3 text-center flex flex-col justify-center">
+                      <div className="text-[9px] sm:text-[10px] uppercase font-bold text-red-200">Auto Send</div>
+                      <div className="text-[10px] sm:text-xs font-black text-emerald-300 mt-1 flex items-center justify-center gap-1">
+                        <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                        <span>6 AM IST</span>
                       </div>
                     </div>
                   </div>
