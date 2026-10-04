@@ -166,7 +166,6 @@ export const App: React.FC = () => {
       const res = await insertPolicyholderToSupabase(supabaseConfig.url, supabaseConfig.anon_key, clientData);
       if (res.error) {
         showToast(`Database error: ${res.error}`, 'error');
-        alert(`Could not save to Supabase database: ${res.error}`);
         return;
       }
       if (res.id) createdId = res.id;
@@ -308,18 +307,27 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
       
-      {/* Toast Notification (Mobile friendly: appears cleanly at top on mobile, bottom right on desktop) */}
+      {/* Toast Notification (Top-centered floating pill: prominent, elevated above modals, never blocked by bottom nav) */}
       {toastMessage && (
-        <div className="fixed top-3 left-3 right-3 sm:top-auto sm:left-auto sm:bottom-20 sm:right-6 md:bottom-6 z-50 flex justify-center sm:justify-end pointer-events-none">
-          <div className={`pointer-events-auto px-4 py-3 rounded-2xl shadow-2xl border text-sm font-bold flex items-center gap-2.5 max-w-sm w-full sm:w-auto animate-in fade-in slide-in-from-top-4 sm:slide-in-from-bottom-4 duration-200 ${
+        <div className="fixed top-5 left-0 right-0 z-[9999] flex justify-center px-4 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className={`pointer-events-auto px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-bold flex items-center gap-3 max-w-md w-full sm:w-auto backdrop-blur-md transition-all ${
             toastMessage.type === 'success'
-              ? 'bg-emerald-800 text-white border-emerald-900'
+              ? 'bg-slate-900/95 text-white border-emerald-500/50 shadow-emerald-950/40 ring-1 ring-emerald-500/20'
               : toastMessage.type === 'error'
-                ? 'bg-red-800 text-white border-red-900'
-                : 'bg-slate-900 text-white border-slate-950'
+                ? 'bg-red-950/95 text-white border-red-500/50 shadow-red-950/40 ring-1 ring-red-500/20'
+                : 'bg-slate-900/95 text-white border-slate-700/60 shadow-slate-950/40'
           }`}>
-            <span className="text-base">{toastMessage.type === 'success' ? '🎂' : toastMessage.type === 'error' ? '⚠️' : 'ℹ️'}</span>
-            <span className="flex-1">{toastMessage.text}</span>
+            <span className="w-8 h-8 rounded-xl flex items-center justify-center text-base shrink-0 bg-white/10">
+              {toastMessage.type === 'success' ? '🎂' : toastMessage.type === 'error' ? '⚠️' : 'ℹ️'}
+            </span>
+            <span className="flex-1 text-xs sm:text-sm font-semibold leading-snug">{toastMessage.text}</span>
+            <button 
+              onClick={() => setToastMessage(null)}
+              className="text-white/60 hover:text-white p-1 rounded-lg transition-colors text-xs font-bold shrink-0"
+              title="Dismiss"
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}
@@ -336,6 +344,7 @@ export const App: React.FC = () => {
         onSendSingleEmail={handleSendSingleEmail}
         onSendAllToday={handleSendAllToday}
         onPreviewClientEmail={(c) => setPreviewClient(c)}
+        onShowToast={showToast}
         isSendingBulk={isSendingBulk}
       />
 

@@ -45,6 +45,7 @@ interface PostalAgentMainViewProps {
   onSendAllToday: () => Promise<void>;
   onPreviewClientEmail: (client: Client) => void;
   onOpenSettings?: () => void;
+  onShowToast?: (text: string, type?: 'success' | 'error' | 'info') => void;
   isSendingBulk: boolean;
 }
 
@@ -112,6 +113,7 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
   onSendAllToday,
   onPreviewClientEmail,
   onOpenSettings,
+  onShowToast,
   isSendingBulk,
 }) => {
   // Navigation / Page State: Add Policyholder opens by default when website loads
@@ -127,6 +129,7 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
   const [policyOpeningDate, setPolicyOpeningDate] = useState('');
   const [phone, setPhone] = useState('');
   const [formSuccess, setFormSuccess] = useState(false);
+  const [formError, setFormError] = useState('');
 
   // Edit Policyholder State
   const [editingClient, setEditingClient] = useState<Client | null>(null);
@@ -138,11 +141,14 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
   const [editEmail, setEditEmail] = useState('');
   const [editOpeningDate, setEditOpeningDate] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [editError, setEditError] = useState('');
 
   // Hamburger Menu & Inspection Drawer State
   const [isHamburgerOpen, setIsHamburgerOpen] = useState(false);
   const [inspectingClient, setInspectingClient] = useState<Client | null>(null);
   const [copiedPolicyNo, setCopiedPolicyNo] = useState(false);
+  const [isSubmittingPolicy, setIsSubmittingPolicy] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Search & Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -183,64 +189,83 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
   };
 
   // Save Edited Client
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingClient) return;
+    setEditError('');
 
     if (!editName.trim() || !editPolicyNumber.trim() || !editDOB || !editEmail.trim()) {
-      alert('Please fill mandatory fields: Policyholder Name, Policy Number, Date of Birth, and Customer Mail ID.');
+      setEditError('Please fill mandatory fields: Policyholder Name, Policy Number, Date of Birth, and Customer Mail ID.');
+      onShowToast?.('⚠️ Please fill all mandatory fields (*)', 'error');
       return;
     }
 
-    const updated: Client = {
-      ...editingClient,
-      name: editName.trim(),
-      policy_number: editPolicyNumber.trim().toUpperCase(),
-      policy_category: editCategory,
-      policy_type: editScheme,
-      date_of_birth: editDOB,
-      email: editEmail.trim(),
-      policy_opening_date: editOpeningDate || '',
-      phone: editPhone.trim() || '+91 ',
-    };
+    setIsSavingEdit(true);
+    try {
+      const updated: Client = {
+        ...editingClient,
+        name: editName.trim(),
+        policy_number: editPolicyNumber.trim().toUpperCase(),
+        policy_category: editCategory,
+        policy_type: editScheme,
+        date_of_birth: editDOB,
+        email: editEmail.trim(),
+        policy_opening_date: editOpeningDate || '',
+        phone: editPhone.trim() || '+91 ',
+      };
 
-    onUpdateClient(updated);
-    setEditingClient(null);
+      await onUpdateClient(updated);
+      setEditingClient(null);
+      setEditError('');
+      onShowToast?.(`✅ Policy details updated for ${updated.name}!`, 'success');
 
-    // If inspecting this client, update the modal inspection
-    if (inspectingClient?.id === updated.id) {
-      setInspectingClient(updated);
+      // If inspecting this client, update the modal inspection
+      if (inspectingClient?.id === updated.id) {
+        setInspectingClient(updated);
+      }
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
   // Form submit handler: stores ONLY form fields, no unnecessary data
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError('');
+
     if (!name.trim() || !policyNumber.trim() || !dateOfBirth || !email.trim()) {
-      alert('Please fill mandatory fields: Policyholder Name, Policy Number, Date of Birth, and Customer Mail ID.');
+      setFormError('Please fill mandatory fields: Policyholder Name, Policy Number, Date of Birth, and Customer Mail ID.');
+      onShowToast?.('⚠️ Please fill all mandatory fields (*)', 'error');
       return;
     }
 
-    onAddClient({
-      name: name.trim(),
-      policy_number: policyNumber.trim().toUpperCase(),
-      policy_category: policyCategory,
-      policy_type: policyScheme,
-      date_of_birth: dateOfBirth,
-      email: email.trim(),
-      policy_opening_date: policyOpeningDate || new Date().toISOString().split('T')[0],
-      phone: phone.trim() || '+91 ',
-    });
+    setIsSubmittingPolicy(true);
+    try {
+      await onAddClient({
+        name: name.trim(),
+        policy_number: policyNumber.trim().toUpperCase(),
+        policy_category: policyCategory,
+        policy_type: policyScheme,
+        date_of_birth: dateOfBirth,
+        email: email.trim(),
+        policy_opening_date: policyOpeningDate || new Date().toISOString().split('T')[0],
+        phone: phone.trim() || '+91 ',
+      });
 
-    // Reset Form
-    setName('');
-    setPolicyNumber('');
-    setDateOfBirth('');
-    setEmail('');
-    setPolicyOpeningDate('');
-    setPhone('');
-    setFormSuccess(true);
-    setTimeout(() => setFormSuccess(false), 4000);
+      // Reset Form
+      setName('');
+      setPolicyNumber('');
+      setDateOfBirth('');
+      setEmail('');
+      setPolicyOpeningDate('');
+      setPhone('');
+      setFormError('');
+      setFormSuccess(true);
+      onShowToast?.(`🎉 Policyholder ${name.trim()} added & synced to database!`, 'success');
+      setTimeout(() => setFormSuccess(false), 5000);
+    } finally {
+      setIsSubmittingPolicy(false);
+    }
   };
 
   // Check if sent today
@@ -293,6 +318,7 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
   const handleCopyPolicy = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedPolicyNo(true);
+    onShowToast?.(`📋 Policy Number ${text} copied to clipboard!`, 'info');
     setTimeout(() => setCopiedPolicyNo(false), 2000);
   };
 
@@ -396,7 +422,10 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
 
       {/* 3. SLIDE-OUT HAMBURGER MENU DRAWER */}
       {isHamburgerOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex">
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex"
+          onClick={(e) => { if (e.target === e.currentTarget) setIsHamburgerOpen(false); }}
+        >
           <div className="w-80 max-w-[85vw] bg-white h-full shadow-2xl p-5 flex flex-col justify-between overflow-y-auto border-r border-slate-200 animate-in slide-in-from-left duration-200">
             <div className="space-y-6">
               
@@ -1259,6 +1288,26 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                 </div>
               )}
 
+              {/* Validation Error Alert */}
+              {formError && (
+                <div className="p-4 rounded-2xl bg-red-50 border-2 border-red-300 text-red-950 text-sm flex items-center justify-between gap-3 animate-in fade-in duration-300">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-6 h-6 rounded-lg bg-red-600 text-white flex items-center justify-center text-xs font-black shrink-0">!</span>
+                    <div>
+                      <p className="font-black text-red-900">Please Complete Required Information</p>
+                      <p className="text-xs text-red-700 font-medium">{formError}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormError('')}
+                    className="p-1.5 rounded-lg text-red-400 hover:text-red-700 font-bold touch-target"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
               {/* FORM */}
               <form onSubmit={handleFormSubmit} className="space-y-6">
                 
@@ -1487,10 +1536,20 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                 <div className="pt-2">
                   <button
                     type="submit"
-                    className="w-full sm:w-auto min-w-[320px] flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-red-600 via-red-700 to-red-800 hover:from-red-700 hover:to-red-900 active:scale-[0.99] text-white font-black text-base shadow-xl shadow-red-700/25 transition-all touch-target border border-red-500/30"
+                    disabled={isSubmittingPolicy}
+                    className="w-full sm:w-auto min-w-[320px] flex items-center justify-center gap-3 px-8 py-4 rounded-2xl bg-gradient-to-r from-red-600 via-red-700 to-red-800 hover:from-red-700 hover:to-red-900 active:scale-[0.99] text-white font-black text-base shadow-xl shadow-red-700/25 transition-all touch-target border border-red-500/30 disabled:opacity-60"
                   >
-                    <UserPlus className="w-5 h-5 text-red-200" />
-                    <span>Save Policyholder & Schedule 6 AM Wishes</span>
+                    {isSubmittingPolicy ? (
+                      <>
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                        <span>Saving to Postal Database...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-5 h-5 text-red-200" />
+                        <span>Save Policyholder & Schedule 6 AM Wishes</span>
+                      </>
+                    )}
                   </button>
                   
                   <div className="mt-3 flex items-center gap-2 text-xs text-slate-500 flex-wrap">
@@ -1542,7 +1601,10 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
       {/* 5. EDIT POLICYHOLDER MODAL (FOR FATHER & MOTHER)                     */}
       {/* ==================================================================== */}
       {editingClient && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-2 sm:p-4 overflow-y-auto"
+          onClick={(e) => { if (e.target === e.currentTarget) setEditingClient(null); }}
+        >
           <div className="w-full max-w-lg bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200 my-auto">
             
             {/* Modal Header */}
@@ -1561,6 +1623,14 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                 <X className="w-6 h-6" />
               </button>
             </div>
+
+            {/* Error Notification Alert */}
+            {editError && (
+              <div className="p-3 bg-red-50 border-b border-red-200 text-red-900 text-xs font-bold flex items-center justify-between px-5">
+                <span>⚠️ {editError}</span>
+                <button onClick={() => setEditError('')} className="text-red-500 hover:text-red-800">✕</button>
+              </div>
+            )}
 
             {/* Modal Form Body */}
             <form onSubmit={handleSaveEdit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
@@ -1709,10 +1779,20 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
 
                 <button
                   type="submit"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-red-600 active:bg-red-700 text-white font-black text-sm shadow-md shadow-red-200 touch-target"
+                  disabled={isSavingEdit}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-red-600 active:bg-red-700 text-white font-black text-sm shadow-md shadow-red-200 touch-target disabled:opacity-60"
                 >
-                  <Save className="w-4 h-4" />
-                  <span>Save Changes</span>
+                  {isSavingEdit ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Updating Database...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
                 </button>
               </div>
 
@@ -1723,11 +1803,14 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
       )}
 
       {/* ==================================================================== */}
-      {/* 6. DEDICATED POLICYHOLDER DETAILS (BOTTOM SHEET ON MOBILE)          */}
+      {/* 6. DEDICATED POLICYHOLDER DETAILS (CENTERED DIALOG)                 */}
       {/* ==================================================================== */}
       {inspectingClient && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="w-full max-w-lg bg-white rounded-t-3xl sm:rounded-2xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+        <div 
+          className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          onClick={(e) => { if (e.target === e.currentTarget) setInspectingClient(null); }}
+        >
+          <div className="w-full max-w-lg bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col animate-in fade-in zoom-in-95 duration-200 my-auto">
             
             {/* Header */}
             <div className="bg-red-700 text-white px-5 sm:px-6 py-4 flex items-center justify-between shrink-0">
