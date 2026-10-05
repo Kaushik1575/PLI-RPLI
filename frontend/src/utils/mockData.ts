@@ -8,8 +8,8 @@ export const INITIAL_AGENT_PROFILE: AgentProfile = {
   agent_role: 'Postal Insurance Agents — India Post',
   agency_code: 'PLI/AGT/DAS/74921',
   post_office: 'Head Post Office',
-  phone: '+91 98300 12345',
-  email: 'amulya.sasmita.pli@gmail.com',
+  phone: '+91 8328809918',
+  email: 'sasmitadas22041979@gmail.com',
   auto_send_enabled: true,
   auto_send_time: '06:00 AM',
   custom_signature: 'Dedicated to your financial protection under Postal Life Insurance.'

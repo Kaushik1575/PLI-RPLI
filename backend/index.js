@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 5000;
 
 // Configuration from environment variables
 const RESEND_API_KEY = process.env.RESEND_API_KEY || process.env.VITE_RESEND_API_KEY || '';
-const RESEND_SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || process.env.VITE_RESEND_SENDER_EMAIL || 'onboarding@resend.dev';
+const RESEND_SENDER_EMAIL = process.env.RESEND_SENDER_EMAIL || process.env.VITE_RESEND_SENDER_EMAIL || 'onboarding@jitus.tech';
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || '';
 
@@ -23,8 +23,8 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY || process.env.SUPABASE_SERVICE_RO
 const AGENT = {
   name: 'Amulya Kumar Das & Sasmita Das',
   role: 'Postal Insurance Agents',
-  phone: process.env.AGENT_PHONE || '+91 98300 12345',
-  email: process.env.AGENT_EMAIL || 'amulya.sasmita.pli@gmail.com'
+  phone: process.env.AGENT_PHONE || '+91 8328809918',
+  email: process.env.AGENT_EMAIL || 'sasmitadas22041979@gmail.com'
 };
 
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
@@ -393,7 +393,12 @@ export async function executeDailyBirthdayCheck() {
             html: html,
           });
 
-          console.log(`✅ Dispatched 6 AM Birthday Email via Resend to ${person.name} <${person.email}>! (ID: ${sendRes.data?.id})`);
+          if (sendRes.error) {
+            console.error(`❌ Resend returned error for ${person.name} <${person.email}>:`, sendRes.error.message || sendRes.error);
+            continue;
+          }
+
+          console.log(`✅ Dispatched Birthday Email via Resend to ${person.name} <${person.email}>! (ID: ${sendRes.data?.id})`);
 
           // Update last_birthday_wish_sent timestamp in Supabase
           await supabase
@@ -467,4 +472,10 @@ app.post('/api/trigger-birthday-check', async (req, res) => {
 app.listen(PORT, () => {
   console.log(`\n📮 DakPost PLI Backend Server listening on http://localhost:${PORT}`);
   console.log(`🌐 Health endpoint: http://localhost:${PORT}/api/status`);
+
+  // Non-blocking catch-up: if server was started/rebooted after 6:00 AM, send any pending greetings
+  setTimeout(() => {
+    console.log('🔍 Running catch-up scan for any unfulfilled birthday emails today...');
+    executeDailyBirthdayCheck();
+  }, 2000);
 });

@@ -33,9 +33,9 @@ export async function sendBirthdayEmail(
 
   // Real Resend API dispatch
   try {
-    const sender = config.sender_email 
+    const sender = config.sender_email && config.sender_email !== 'onboarding@resend.dev'
       ? (config.sender_name ? `${config.sender_name} <${config.sender_email}>` : config.sender_email)
-      : 'onboarding@resend.dev';
+      : 'Amulya Kumar Das & Sasmita Das <onboarding@jitus.tech>';
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -92,9 +92,9 @@ export async function sendTestEmail(
   }
 
   try {
-    const sender = config.sender_email 
+    const sender = config.sender_email && config.sender_email !== 'onboarding@resend.dev'
       ? `${config.sender_name || 'Postal Agent'} <${config.sender_email}>`
-      : 'onboarding@resend.dev';
+      : 'Amulya Kumar Das & Sasmita Das <onboarding@jitus.tech>';
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',

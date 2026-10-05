@@ -351,11 +351,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">
-                      Sender Email
+                      Sender Email (Verified Domain)
                     </label>
                     <input
                       type="text"
-                      placeholder="onboarding@resend.dev"
+                      placeholder="onboarding@jitus.tech"
                       value={resendForm.sender_email}
                       onChange={(e) => setResendForm({ ...resendForm, sender_email: e.target.value })}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-slate-900 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"

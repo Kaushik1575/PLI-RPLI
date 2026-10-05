@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PostalAgentMainView } from './components/PostalAgentMainView';
 import { EmailPreviewModal } from './components/EmailPreviewModal';
 import confetti from 'canvas-confetti';
@@ -49,7 +49,13 @@ export const App: React.FC = () => {
 
   const [agent, setAgent] = useState<AgentProfile>(() => {
     const saved = localStorage.getItem('dakpost_agent');
-    return saved ? JSON.parse(saved) : INITIAL_AGENT_PROFILE;
+    const parsed = saved ? JSON.parse(saved) : INITIAL_AGENT_PROFILE;
+    return {
+      ...INITIAL_AGENT_PROFILE,
+      ...parsed,
+      phone: '+91 8328809918',
+      email: 'sasmitadas22041979@gmail.com',
+    };
   });
 
   const [templates, setTemplates] = useState<EmailTemplate[]>(() => {
@@ -64,6 +70,7 @@ export const App: React.FC = () => {
 
   const DEFAULT_SUPABASE_URL = 'https://qcbbhyxtacpxpnyjqygj.supabase.co';
   const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjYmJoeXh0YWNweHBueWpxeWdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5MjAyODksImV4cCI6MjEwNjQ5NjI4OX0.d8f_UjpJiiXrjAGSH1-0qJpc6yu03oZ0tgR_-0ct6PU';
+  const DEFAULT_SENDER_EMAIL = 'onboarding@jitus.tech';
 
   const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
   const envSupabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
@@ -73,12 +80,17 @@ export const App: React.FC = () => {
     const saved = localStorage.getItem('dakpost_resend');
     const parsed = saved ? JSON.parse(saved) : null;
     const key = envResendKey || parsed?.api_key || '';
+    // Auto-heal from onboarding@resend.dev (which gets blocked by Resend) to verified domain onboarding@jitus.tech
+    const senderEmail = (!parsed?.sender_email || parsed?.sender_email === 'onboarding@resend.dev')
+      ? DEFAULT_SENDER_EMAIL
+      : parsed.sender_email;
+
     return {
       api_key: key,
-      sender_name: parsed?.sender_name || 'Postal Life Insurance Agent',
-      sender_email: parsed?.sender_email || 'onboarding@resend.dev',
+      sender_name: parsed?.sender_name || 'Amulya Kumar Das & Sasmita Das',
+      sender_email: senderEmail,
       is_connected: Boolean(key),
-      simulation_mode: key ? false : (parsed?.simulation_mode ?? true),
+      simulation_mode: false,
     };
   });
 
@@ -141,6 +153,46 @@ export const App: React.FC = () => {
     }
   }, [supabaseConfig.is_connected, supabaseConfig.url, supabaseConfig.anon_key]);
 
+  const activeTemplate = templates[0] || INITIAL_TEMPLATES[0];
+
+  // Automated Daily Morning Dispatcher Check on App Load
+  const hasAutoCheckedRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoCheckedRef.current || clients.length === 0 || !resendConfig.api_key) return;
+
+    const todayIsoDate = new Date().toISOString().split('T')[0];
+    const pendingToday = clients.filter(c => {
+      const isToday = isBirthdayToday(c.date_of_birth);
+      const alreadySent = c.last_birthday_wish_sent && c.last_birthday_wish_sent.startsWith(todayIsoDate);
+      return isToday && !alreadySent;
+    });
+
+    if (pendingToday.length > 0 && agent.auto_send_enabled !== false) {
+      hasAutoCheckedRef.current = true;
+      console.log(`⏰ [Auto-Scheduler] Detected ${pendingToday.length} pending birthday(s) today. Auto-dispatching...`);
+      showToast(`🎂 Auto-dispatching ${pendingToday.length} birthday greeting(s) for today...`, 'info');
+
+      (async () => {
+        for (const client of pendingToday) {
+          try {
+            const res = await sendBirthdayEmail(client, agent, activeTemplate, resendConfig);
+            if (res.success) {
+              if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
+                await updateBirthdayWishSentInSupabase(supabaseConfig.url, supabaseConfig.anon_key, client.id);
+              }
+              setClients(prev => prev.map(item => item.id === client.id ? { ...item, last_birthday_wish_sent: new Date().toISOString() } : item));
+              showToast(`✅ Auto-sent birthday wish to ${client.name} (${client.email})!`, 'success');
+            } else {
+              showToast(`⚠️ Failed to auto-send to ${client.name}: ${res.error}`, 'error');
+            }
+          } catch (e: any) {
+            console.error('Auto-dispatch error:', e);
+          }
+        }
+      })();
+    }
+  }, [clients, resendConfig, agent, activeTemplate, supabaseConfig]);
+
   // Sync to localStorage
   useEffect(() => {
     localStorage.setItem('dakpost_clients_v2', JSON.stringify(clients));
@@ -170,8 +222,6 @@ export const App: React.FC = () => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 5000);
   };
-
-  const activeTemplate = templates[0] || INITIAL_TEMPLATES[0];
 
   // Add new policyholder
   const handleAddClient = async (clientData: Omit<Client, 'id' | 'created_at'>) => {
@@ -299,11 +349,13 @@ export const App: React.FC = () => {
         };
         setLogs(prev => [newLog, ...prev]);
 
-        if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
-          updateBirthdayWishSentInSupabase(supabaseConfig.url, supabaseConfig.anon_key, client.id);
+        if (res.success) {
+          successCount++;
+          if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
+            await updateBirthdayWishSentInSupabase(supabaseConfig.url, supabaseConfig.anon_key, client.id);
+          }
+          setClients(prev => prev.map(item => item.id === client.id ? { ...item, last_birthday_wish_sent: new Date().toISOString() } : item));
         }
-
-        if (res.success) successCount++;
       } catch (err) {
         console.error('Error sending email:', err);
       }
