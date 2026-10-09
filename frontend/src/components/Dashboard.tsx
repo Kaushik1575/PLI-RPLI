@@ -129,23 +129,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
           {/* Quick Action Button in Hero */}
           <div className="flex flex-wrap items-center gap-3">
             {todayBirthdays.length > 0 && (
-              <button
-                onClick={handleBulkSendWithConfetti}
-                disabled={isSendingBulk}
-                className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold shadow-lg shadow-red-600/30 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50"
-              >
-                {isSendingBulk ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    <span>Dispatching via Resend...</span>
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-5 h-5" />
-                    <span>Send All Greetings ({todayBirthdays.length})</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
+    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+    <span>Automated Dispatch Active (6:00 AM IST)</span>
+  </div>
             )}
 
             <button
@@ -333,32 +320,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
                         <Eye className="w-4 h-4" />
                       </button>
 
-                      <button
-                        onClick={() => handleSendSingle(client)}
-                        disabled={isThisSending || isSendingBulk}
-                        className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
-                          sent
-                            ? 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                            : 'bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-600/20'
-                        } disabled:opacity-50`}
-                      >
-                        {isThisSending ? (
-                          <>
-                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                            <span>Sending...</span>
-                          </>
-                        ) : sent ? (
-                          <>
-                            <RefreshCw className="w-3.5 h-3.5" />
-                            <span>Re-send</span>
-                          </>
-                        ) : (
-                          <>
-                            <Send className="w-3.5 h-3.5" />
-                            <span>Send Greeting</span>
-                          </>
-                        )}
-                      </button>
+                      {sent ? (
+    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/50 text-emerald-300 border border-emerald-500/30 text-xs font-bold">
+      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+      <span>Sent ✅</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-950/50 text-amber-300 border border-amber-500/30 text-xs font-bold">
+      <Clock className="w-3.5 h-3.5 text-amber-400" />
+      <span>Pending ⏳</span>
+    </div>
+  )}
                     </div>
                   </div>
                 );

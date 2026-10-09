@@ -141,28 +141,10 @@ export const EmailPreviewModal: React.FC<EmailPreviewModalProps> = ({
               Close
             </button>
 
-            <button
-              onClick={handleSend}
-              disabled={isSending || sentSuccess}
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 py-3 sm:py-2.5 rounded-xl bg-red-600 active:bg-red-700 text-white text-sm sm:text-xs font-bold shadow-md shadow-red-200 transition-all disabled:opacity-50 touch-target"
-            >
-              {isSending ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Sending...</span>
-                </>
-              ) : sentSuccess ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-white" />
-                  <span>Dispatched!</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  <span>Send Wish Now</span>
-                </>
-              )}
-            </button>
+            <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3.5 py-2 rounded-xl">
+    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+    <span>Automated Dispatch Only • No manual send needed</span>
+  </div>
           </div>
         </div>
 

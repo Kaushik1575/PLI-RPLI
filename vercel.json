@@ -1,5 +1,11 @@
-{
+﻿{
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/trigger-birthday-check",
+      "schedule": "30 0 * * *"
+    }
+  ],
   "services": {
     "backend": {
       "root": "backend",

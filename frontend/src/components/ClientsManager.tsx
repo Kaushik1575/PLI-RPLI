@@ -435,14 +435,7 @@ export const ClientsManager: React.FC<ClientsManagerProps> = ({
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {/* Send Email Now */}
-                          <button
-                            onClick={() => onSendSingleEmail(client)}
-                            className="p-1.5 rounded-lg bg-red-600/20 hover:bg-red-600 text-red-300 hover:text-white border border-red-500/30 transition-all"
-                            title="Send Birthday Greeting Now"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
+                          
 
                           {/* Edit */}
                           <button

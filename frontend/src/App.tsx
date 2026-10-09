@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { PostalAgentMainView } from './components/PostalAgentMainView';
 import { EmailPreviewModal } from './components/EmailPreviewModal';
+import { ScratchCelebrationModal } from './components/ScratchCelebrationModal';
 import confetti from 'canvas-confetti';
 
 import { 
@@ -37,7 +38,6 @@ export const App: React.FC = () => {
     if (saved) {
       try {
         const parsed: Client[] = JSON.parse(saved);
-        // Clean out only obsolete hardcoded mock IDs (1 to 8), preserve all real policyholders
         const obsoleteMockIds = new Set(['cli-1', 'cli-2', 'cli-3', 'cli-4', 'cli-5', 'cli-6', 'cli-7', 'cli-8']);
         return parsed.filter(c => !obsoleteMockIds.has(c.id));
       } catch {
@@ -49,13 +49,7 @@ export const App: React.FC = () => {
 
   const [agent, setAgent] = useState<AgentProfile>(() => {
     const saved = localStorage.getItem('dakpost_agent');
-    const parsed = saved ? JSON.parse(saved) : INITIAL_AGENT_PROFILE;
-    return {
-      ...INITIAL_AGENT_PROFILE,
-      ...parsed,
-      phone: '+91 8328809918',
-      email: 'sasmitadas22041979@gmail.com',
-    };
+    return saved ? JSON.parse(saved) : INITIAL_AGENT_PROFILE;
   });
 
   const [templates, setTemplates] = useState<EmailTemplate[]>(() => {
@@ -70,7 +64,6 @@ export const App: React.FC = () => {
 
   const DEFAULT_SUPABASE_URL = 'https://qcbbhyxtacpxpnyjqygj.supabase.co';
   const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFjYmJoeXh0YWNweHBueWpxeWdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA5MjAyODksImV4cCI6MjEwNjQ5NjI4OX0.d8f_UjpJiiXrjAGSH1-0qJpc6yu03oZ0tgR_-0ct6PU';
-  const DEFAULT_SENDER_EMAIL = 'onboarding@jitus.tech';
 
   const envSupabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
   const envSupabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
@@ -79,12 +72,8 @@ export const App: React.FC = () => {
   const [resendConfig, setResendConfig] = useState<ResendSettings>(() => {
     const saved = localStorage.getItem('dakpost_resend');
     const parsed = saved ? JSON.parse(saved) : null;
-    const key = envResendKey || parsed?.api_key || '';
-    // Auto-heal from onboarding@resend.dev (which gets blocked by Resend) to verified domain onboarding@jitus.tech
-    const senderEmail = (!parsed?.sender_email || parsed?.sender_email === 'onboarding@resend.dev')
-      ? DEFAULT_SENDER_EMAIL
-      : parsed.sender_email;
-
+    const key = (envResendKey || parsed?.api_key || '').trim();
+    const senderEmail = (import.meta.env.VITE_RESEND_SENDER_EMAIL || parsed?.sender_email || 'onboarding@jitus.tech').trim();
     return {
       api_key: key,
       sender_name: parsed?.sender_name || 'Amulya Kumar Das & Sasmita Das',
@@ -101,7 +90,6 @@ export const App: React.FC = () => {
     const url = cleanSupabaseUrl(rawUrl) || cleanSupabaseUrl(envSupabaseUrl);
     const key = (parsed?.anon_key && parsed.anon_key.trim() !== '') ? parsed.anon_key.trim() : envSupabaseKey.trim();
 
-    // Auto-heal localStorage if corrupted URL was saved earlier
     if (parsed && (parsed.url !== url || parsed.anon_key !== key)) {
       try {
         localStorage.setItem('dakpost_supabase', JSON.stringify({
@@ -109,9 +97,7 @@ export const App: React.FC = () => {
           anon_key: key,
           is_connected: Boolean(url && key)
         }));
-      } catch (e) {
-        // ignore localStorage access issues
-      }
+      } catch (e) {}
     }
 
     return {
@@ -123,16 +109,16 @@ export const App: React.FC = () => {
 
   // UI Modals
   const [previewClient, setPreviewClient] = useState<Client | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSendingBulk, setIsSendingBulk] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+  // Scratch Card Celebration Modal
+  const [scratchClient, setScratchClient] = useState<Client | null>(null);
 
   // Two-way sync: fetches all policyholders from Supabase and automatically pushes any local-only clients to Supabase
   useEffect(() => {
     if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
       fetchPolicyholdersFromSupabase(supabaseConfig.url, supabaseConfig.anon_key).then(async (serverData) => {
         if (serverData) {
-          // Detect any clients stored locally that are not yet in Supabase
           const serverPolicyNos = new Set(serverData.map(c => c.policy_number.toUpperCase()));
           const localOnly = clients.filter(c => !serverPolicyNos.has(c.policy_number.toUpperCase()));
 
@@ -155,42 +141,87 @@ export const App: React.FC = () => {
 
   const activeTemplate = templates[0] || INITIAL_TEMPLATES[0];
 
-  // Automated Daily Morning Dispatcher Check on App Load
-  const hasAutoCheckedRef = useRef(false);
+  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 5000);
+  };
+
+  // =====================================================================
+  // CONTINUOUS 2-MINUTE AUTOMATIC DISPATCHER TIMER
+  // Automatically scans every 2 minutes for pending birthdays today
+  // =====================================================================
+  const isAutoDispatchingRef = useRef(false);
+
   useEffect(() => {
-    if (hasAutoCheckedRef.current || clients.length === 0 || !resendConfig.api_key) return;
+    if (!resendConfig.api_key || clients.length === 0 || agent.auto_send_enabled === false) return;
 
-    const todayIsoDate = new Date().toISOString().split('T')[0];
-    const pendingToday = clients.filter(c => {
-      const isToday = isBirthdayToday(c.date_of_birth);
-      const alreadySent = c.last_birthday_wish_sent && c.last_birthday_wish_sent.startsWith(todayIsoDate);
-      return isToday && !alreadySent;
-    });
+    const checkAndDispatchPendingBirthdays = async () => {
+      if (isAutoDispatchingRef.current) return;
 
-    if (pendingToday.length > 0 && agent.auto_send_enabled !== false) {
-      hasAutoCheckedRef.current = true;
-      console.log(`⏰ [Auto-Scheduler] Detected ${pendingToday.length} pending birthday(s) today. Auto-dispatching...`);
-      showToast(`🎂 Auto-dispatching ${pendingToday.length} birthday greeting(s) for today...`, 'info');
+      // Get current date in Indian Standard Time (YYYY-MM-DD)
+      const now = new Date();
+      const todayIsoDate = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
-      (async () => {
-        for (const client of pendingToday) {
-          try {
-            const res = await sendBirthdayEmail(client, agent, activeTemplate, resendConfig);
-            if (res.success) {
-              if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
-                await updateBirthdayWishSentInSupabase(supabaseConfig.url, supabaseConfig.anon_key, client.id);
-              }
-              setClients(prev => prev.map(item => item.id === client.id ? { ...item, last_birthday_wish_sent: new Date().toISOString() } : item));
-              showToast(`✅ Auto-sent birthday wish to ${client.name} (${client.email})!`, 'success');
-            } else {
-              showToast(`⚠️ Failed to auto-send to ${client.name}: ${res.error}`, 'error');
+      // Find any celebrants today who have NOT yet been sent a greeting today
+      const pendingCelebrants = clients.filter(c => {
+        const isToday = isBirthdayToday(c.date_of_birth);
+        const alreadySentToday = c.last_birthday_wish_sent && c.last_birthday_wish_sent.startsWith(todayIsoDate);
+        return isToday && !alreadySentToday;
+      });
+
+      if (pendingCelebrants.length === 0) return;
+
+      isAutoDispatchingRef.current = true;
+      console.log(`🎂 [Auto-Scheduler (2-Min Periodic Check)] Found ${pendingCelebrants.length} pending birthday(s) for ${todayIsoDate}. Auto-dispatching...`);
+      showToast(`🎂 Auto-Scheduler: Automatically dispatching ${pendingCelebrants.length} birthday wish(es)...`, 'info');
+
+      for (const client of pendingCelebrants) {
+        try {
+          const res = await sendBirthdayEmail(client, agent, activeTemplate, resendConfig);
+          const sentTimestamp = new Date().toISOString();
+
+          const newLog: EmailLog = {
+            id: `log-auto-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            client_id: client.id,
+            client_name: client.name,
+            client_email: client.email,
+            policy_number: client.policy_number,
+            policy_type: client.policy_type,
+            sent_at: sentTimestamp,
+            status: res.success ? (res.simulated ? 'simulated' : 'sent') : 'failed',
+            subject: activeTemplate.subject.replace('{client_name}', client.name),
+            template_id: activeTemplate.id,
+            resend_id: res.resendId,
+            error_message: res.error,
+          };
+          setLogs(prev => [newLog, ...prev]);
+
+          if (res.success) {
+            if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
+              await updateBirthdayWishSentInSupabase(supabaseConfig.url, supabaseConfig.anon_key, client.id);
             }
-          } catch (e: any) {
-            console.error('Auto-dispatch error:', e);
+            setClients(prev => prev.map(item => item.id === client.id ? { ...item, last_birthday_wish_sent: sentTimestamp } : item));
+            showToast(`🎉 Auto-Scheduler: Sent birthday wish to ${client.name} (${client.email})!`, 'success');
+          } else {
+            showToast(`⚠️ Auto-send failed for ${client.name}: ${res.error}`, 'error');
           }
+        } catch (err: any) {
+          console.error('Auto-dispatch error:', err);
         }
-      })();
-    }
+      }
+
+      isAutoDispatchingRef.current = false;
+    };
+
+    // 1. Run check immediately
+    checkAndDispatchPendingBirthdays();
+
+    // 2. Set continuous 2-minute recurring interval (120,000 ms)
+    const intervalTimer = setInterval(() => {
+      checkAndDispatchPendingBirthdays();
+    }, 2 * 60 * 1000);
+
+    return () => clearInterval(intervalTimer);
   }, [clients, resendConfig, agent, activeTemplate, supabaseConfig]);
 
   // Sync to localStorage
@@ -218,16 +249,10 @@ export const App: React.FC = () => {
     localStorage.setItem('dakpost_supabase', JSON.stringify(supabaseConfig));
   }, [supabaseConfig]);
 
-  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToastMessage({ text, type });
-    setTimeout(() => setToastMessage(null), 5000);
-  };
-
   // Add new policyholder
   const handleAddClient = async (clientData: Omit<Client, 'id' | 'created_at'>) => {
     let createdId = `cli-${Date.now()}`;
 
-    // Push to Supabase policyholders table if connected
     if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
       const res = await insertPolicyholderToSupabase(supabaseConfig.url, supabaseConfig.anon_key, clientData);
       if (res.error) {
@@ -243,7 +268,6 @@ export const App: React.FC = () => {
       created_at: new Date().toISOString(),
     };
     setClients(prev => [newClient, ...prev]);
-
     showToast(`Added ${newClient.name} (${newClient.policy_number}) to Policy list!`, 'success');
   };
 
@@ -269,7 +293,6 @@ export const App: React.FC = () => {
   const handleDeleteClient = (id: string) => {
     setClients(prev => prev.filter(c => c.id !== id));
 
-    // Remove from Supabase if connected
     if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
       deletePolicyholderFromSupabase(supabaseConfig.url, supabaseConfig.anon_key, id);
     }
@@ -277,11 +300,12 @@ export const App: React.FC = () => {
     showToast('Policyholder removed from list', 'info');
   };
 
-  // Send single birthday email
+  // Send single birthday email (manual trigger from table or modal)
   const handleSendSingleEmail = async (client: Client) => {
     try {
       const res = await sendBirthdayEmail(client, agent, activeTemplate, resendConfig);
-      
+      const sentTimestamp = new Date().toISOString();
+
       const newLog: EmailLog = {
         id: `log-${Date.now()}`,
         client_id: client.id,
@@ -289,7 +313,7 @@ export const App: React.FC = () => {
         client_email: client.email,
         policy_number: client.policy_number,
         policy_type: client.policy_type,
-        sent_at: new Date().toISOString(),
+        sent_at: sentTimestamp,
         status: res.success ? (res.simulated ? 'simulated' : 'sent') : 'failed',
         subject: activeTemplate.subject.replace('{client_name}', client.name),
         template_id: activeTemplate.id,
@@ -299,18 +323,21 @@ export const App: React.FC = () => {
 
       setLogs(prev => [newLog, ...prev]);
 
-      // Update last_birthday_wish_sent in Supabase if connected
-      if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
-        updateBirthdayWishSentInSupabase(supabaseConfig.url, supabaseConfig.anon_key, client.id);
-      }
-
       if (res.success) {
+        if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
+          await updateBirthdayWishSentInSupabase(supabaseConfig.url, supabaseConfig.anon_key, client.id);
+        }
+        setClients(prev => prev.map(item => item.id === client.id ? { ...item, last_birthday_wish_sent: sentTimestamp } : item));
+
         showToast(
           res.simulated
             ? `[Simulation] Birthday mail sent to ${client.name} (${client.email})!`
             : `Birthday greeting email dispatched via Resend to ${client.name}!`,
           'success'
         );
+
+        // Pop up the interactive Scratch Card Celebration Modal!
+        setScratchClient(client);
       } else {
         showToast(`Failed to send email: ${res.error}`, 'error');
       }
@@ -319,7 +346,27 @@ export const App: React.FC = () => {
     }
   };
 
-  // Send all today's birthday greetings
+  // Quick test sender to dask64576@gmail.com to test email + scratch modal
+  const handleSendTestBirthdayEmail = async () => {
+    const todayDate = new Date().toISOString().split('T')[0];
+    const testClient: Client = {
+      id: `cli-test-${Date.now()}`,
+      name: 'Kaushik (Test Demo)',
+      email: 'dask64576@gmail.com',
+      phone: '+91 8328809918',
+      date_of_birth: todayDate,
+      policy_number: 'PLI-TEST-0077',
+      policy_type: 'Santosh (Endowment Assurance)',
+      policy_category: 'PLI',
+      policy_opening_date: '2021-03-15',
+      created_at: new Date().toISOString(),
+    };
+
+    showToast('Dispatching test birthday email to dask64576@gmail.com...', 'info');
+    await handleSendSingleEmail(testClient);
+  };
+
+  // Send all today's birthday greetings manually
   const handleSendAllToday = async () => {
     const todayBirthdays = clients.filter(c => isBirthdayToday(c.date_of_birth));
     if (todayBirthdays.length === 0) {
@@ -333,6 +380,8 @@ export const App: React.FC = () => {
     for (const client of todayBirthdays) {
       try {
         const res = await sendBirthdayEmail(client, agent, activeTemplate, resendConfig);
+        const sentTimestamp = new Date().toISOString();
+
         const newLog: EmailLog = {
           id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
           client_id: client.id,
@@ -340,7 +389,7 @@ export const App: React.FC = () => {
           client_email: client.email,
           policy_number: client.policy_number,
           policy_type: client.policy_type,
-          sent_at: new Date().toISOString(),
+          sent_at: sentTimestamp,
           status: res.success ? (res.simulated ? 'simulated' : 'sent') : 'failed',
           subject: activeTemplate.subject.replace('{client_name}', client.name),
           template_id: activeTemplate.id,
@@ -354,7 +403,7 @@ export const App: React.FC = () => {
           if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
             await updateBirthdayWishSentInSupabase(supabaseConfig.url, supabaseConfig.anon_key, client.id);
           }
-          setClients(prev => prev.map(item => item.id === client.id ? { ...item, last_birthday_wish_sent: new Date().toISOString() } : item));
+          setClients(prev => prev.map(item => item.id === client.id ? { ...item, last_birthday_wish_sent: sentTimestamp } : item));
         }
       } catch (err) {
         console.error('Error sending email:', err);
@@ -363,7 +412,7 @@ export const App: React.FC = () => {
 
     setIsSendingBulk(false);
     try {
-      confetti({ particleCount: 90, spread: 60, origin: { y: 0.6 } });
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
     } catch (e) {}
 
     showToast(
@@ -375,7 +424,7 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
       
-      {/* Toast Notification (Top-centered floating pill: prominent, elevated above modals, never blocked by bottom nav) */}
+      {/* Toast Notification (Top-centered floating pill) */}
       {toastMessage && (
         <div className="fixed top-5 left-0 right-0 z-[9999] flex justify-center px-4 pointer-events-none animate-in fade-in slide-in-from-top-4 duration-300">
           <div className={`pointer-events-auto px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-bold flex items-center gap-3 max-w-md w-full sm:w-auto backdrop-blur-md transition-all ${
@@ -414,6 +463,7 @@ export const App: React.FC = () => {
         onPreviewClientEmail={(c) => setPreviewClient(c)}
         onShowToast={showToast}
         isSendingBulk={isSendingBulk}
+        onSendTestBirthdayEmail={handleSendTestBirthdayEmail}
       />
 
       {/* Email Preview Modal */}
@@ -427,6 +477,13 @@ export const App: React.FC = () => {
         isSending={false}
       />
 
+      {/* Scratch Celebration Modal */}
+      <ScratchCelebrationModal
+        isOpen={Boolean(scratchClient)}
+        clientName={scratchClient?.name ?? ''}
+        onClose={() => setScratchClient(null)}
+      />
+
       {/* Simple Footer with clearance for mobile bottom bar */}
       <footer className="border-t border-slate-200 bg-white py-4 pb-24 md:pb-4 text-xs text-slate-500 text-center px-4">
         Postal Life Insurance (PLI) & Rural PLI (RPLI) • Birthday Notification Dispatcher • India Post
@@ -437,3 +494,4 @@ export const App: React.FC = () => {
 };
 
 export default App;
+

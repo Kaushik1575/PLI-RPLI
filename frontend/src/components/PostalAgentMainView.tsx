@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+﻿import React, { useState, useRef } from 'react';
 import { 
   UserPlus, 
   Send, 
@@ -47,6 +47,7 @@ interface PostalAgentMainViewProps {
   onOpenSettings?: () => void;
   onShowToast?: (text: string, type?: 'success' | 'error' | 'info') => void;
   isSendingBulk: boolean;
+  onSendTestBirthdayEmail?: () => Promise<void>;
 }
 
 const PLI_SCHEMES = [
@@ -522,16 +523,10 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                   Every morning at <strong>6:00 AM IST</strong>, your system automatically scans for today's birthdays and delivers greetings.
                 </p>
                 <div className="pt-1">
-                  <button
-                    onClick={() => {
-                      setIsHamburgerOpen(false);
-                      onSendAllToday();
-                    }}
-                    disabled={todayBirthdays.length === 0 || isSendingBulk}
-                    className="w-full py-2.5 bg-red-600 active:bg-red-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs text-center shadow-xs touch-target"
-                  >
-                    Check & Send Today's Wishes Now
-                  </button>
+                  <div className="w-full py-2.5 px-3 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-xl font-bold text-xs text-center flex items-center justify-center gap-2">
+    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+    <span>Automated Dispatch Active (6:00 AM IST)</span>
+  </div>
                 </div>
               </div>
 
@@ -758,24 +753,18 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
                               <Trash2 className="w-4 h-4" />
                             </button>
 
-                            {/* Send Wish Button */}
-                            <button
-                              onClick={() => handleSendSingle(client)}
-                              disabled={isSendingThis || isSendingBulk}
-                              className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-red-600 active:bg-red-700 text-white text-xs font-black shadow-xs shadow-red-200 transition-all touch-target disabled:opacity-50"
-                            >
-                              {isSendingThis ? (
-                                <>
-                                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                  <span>Sending...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Send className="w-3.5 h-3.5" />
-                                  <span>{sent ? 'Resend Wish' : 'Send Wish Now'}</span>
-                                </>
-                              )}
-                            </button>
+                            {/* Automated Delivery Status */}
+  {sent ? (
+    <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold shadow-xs">
+      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+      <span>Email Sent ✅</span>
+    </div>
+  ) : (
+    <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold animate-pulse shadow-xs">
+      <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+      <span>Auto-Sending (Pending) ⏳</span>
+    </div>
+  )}
                           </div>
                         </div>
 
@@ -1820,161 +1809,7 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 {/* Direct Edit Button from inside Details */}
-                <button
-                  onClick={() => {
-                    const c = inspectingClient;
-                    setInspectingClient(null);
-                    startEditing(c);
-                  }}
-                  className="flex items-center gap-1 bg-red-800 hover:bg-red-900 text-white text-xs font-bold px-3 py-1.5 rounded-lg border border-red-600 touch-target"
-                >
-                  <Edit className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Edit</span>
-                </button>
-
-                <button
-                  onClick={() => setInspectingClient(null)}
-                  className="p-1.5 rounded-lg text-red-200 hover:text-white active:bg-red-800 transition-colors touch-target"
-                >
-                  <X className="w-6 h-6" />
-                </button>
-              </div>
-            </div>
-
-            {/* Details Content (Scrollable) */}
-            <div className="p-5 sm:p-6 space-y-4 text-sm overflow-y-auto">
-              
-              {/* Name & Category Badge */}
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <div>
-                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Customer Name</div>
-                  <div className="text-xl font-black text-slate-900">{inspectingClient.name}</div>
-                </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
-                  inspectingClient.policy_category === 'RPLI'
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : 'bg-red-100 text-red-800 border border-red-300'
-                }`}>
-                  {inspectingClient.policy_category} (Postal)
-                </span>
-              </div>
-
-              {/* Policy Number */}
-              <div className="flex items-center justify-between bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div>
-                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Policy Number</div>
-                  <div className="font-mono text-base font-black text-slate-900">{inspectingClient.policy_number}</div>
-                </div>
-                <button
-                  onClick={() => handleCopyPolicy(inspectingClient.policy_number)}
-                  className="flex items-center gap-1.5 text-xs text-red-600 font-bold bg-white px-3 py-2 rounded-lg border border-slate-200 shadow-xs touch-target"
-                >
-                  {copiedPolicyNo ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedPolicyNo ? 'Copied' : 'Copy'}</span>
-                </button>
-              </div>
-
-              {/* Scheme */}
-              <div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Scheme / Plan</div>
-                <div className="font-bold text-slate-800 text-base">{inspectingClient.policy_type}</div>
-              </div>
-
-              {/* DOB & Age */}
-              <div className="grid grid-cols-2 gap-3 bg-red-50/60 p-3.5 rounded-xl border border-red-100">
-                <div>
-                  <div className="text-[10px] text-red-800 font-bold uppercase tracking-wider flex items-center gap-1">
-                    <Cake className="w-3.5 h-3.5 text-red-600" />
-                    <span>Date of Birth</span>
-                  </div>
-                  <div className="font-black text-slate-900 mt-0.5">{formatFriendlyDate(inspectingClient.date_of_birth)}</div>
-                </div>
-                <div>
-                  <div className="text-[10px] text-red-800 font-bold uppercase tracking-wider">Age</div>
-                  <div className="font-black text-slate-900 mt-0.5">{calculateAge(inspectingClient.date_of_birth)} years</div>
-                </div>
-              </div>
-
-              {/* Customer Email & Phone */}
-              <div className="space-y-3">
-                <div>
-                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                    <Mail className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Customer Mail ID</span>
-                  </div>
-                  <div className="font-bold text-slate-800 font-mono text-sm break-all">{inspectingClient.email}</div>
-                </div>
-
-                <div>
-                  <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
-                    <span>Policy Opening Date</span>
-                  </div>
-                  <div className="font-semibold text-slate-800">{formatFriendlyDate(inspectingClient.policy_opening_date)}</div>
-                </div>
-
-                {inspectingClient.phone && (
-                  <div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider flex items-center gap-1">
-                      <Phone className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Mobile / WhatsApp</span>
-                    </div>
-                    <div className="font-semibold text-slate-800">
-                      <a href={`tel:${inspectingClient.phone}`} className="text-blue-600 font-bold underline">
-                        {inspectingClient.phone}
-                      </a>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Status */}
-              <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">
-                <span className="text-slate-500 font-medium">Birthday Wish Status:</span>
-                {hasSentToday(inspectingClient.id) ? (
-                  <span className="font-black text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                    ✓ Sent Today
-                  </span>
-                ) : (
-                  <span className="font-bold text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full">
-                    Pending
-                  </span>
-                )}
-              </div>
-
-            </div>
-
-            {/* Actions Footer */}
-            <div className="bg-slate-50 px-4 sm:px-6 py-3.5 border-t border-slate-200 flex items-center justify-between gap-2 shrink-0 pb-safe">
-              <button
-                onClick={() => setInspectingClient(null)}
-                className="px-4 py-3 rounded-xl bg-slate-200 active:bg-slate-300 text-slate-700 font-bold text-xs touch-target"
-              >
-                Close
-              </button>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const c = inspectingClient;
-                    setInspectingClient(null);
-                    onPreviewClientEmail(c);
-                  }}
-                  className="px-3.5 py-3 rounded-xl bg-white active:bg-slate-100 border border-slate-300 text-slate-700 font-bold text-xs touch-target"
-                >
-                  Preview
-                </button>
-
-                <button
-                  onClick={() => {
-                    const c = inspectingClient;
-                    setInspectingClient(null);
-                    handleSendSingle(c);
-                  }}
-                  className="px-4 py-3 rounded-xl bg-red-600 active:bg-red-700 text-white font-black text-xs shadow-md shadow-red-200 touch-target"
-                >
-                  Send Wish Now
-                </button>
+                
               </div>
             </div>
 
@@ -2036,3 +1871,4 @@ export const PostalAgentMainView: React.FC<PostalAgentMainViewProps> = ({
     </div>
   );
 };
+

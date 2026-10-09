@@ -1,4 +1,4 @@
-import { Client, AgentProfile, EmailTemplate } from '../types';
+﻿import { Client, AgentProfile, EmailTemplate } from '../types';
 import { calculateAge, formatFriendlyDate, maskPolicyNumber } from './dateUtils';
 
 function calculateTenure(openingDate?: string): string {
@@ -130,7 +130,7 @@ export function generateBirthdayEmailHtml(
                 🎉 We are truly delighted to wish you a very <strong>Happy Birthday</strong> on this joyous occasion! May your day be blessed with vibrant joy, sound health, and peace of mind. 🎂
               </p>
 
-              <!-- Distinctive Policy & Milestone Card -->
+                            <!-- Distinctive Policy & Milestone Card -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: linear-gradient(180deg, #fdf8f6 0%, #fef2f2 100%); border: 1px solid #fecaca; border-radius: 14px; margin: 24px 0; overflow: hidden;">
                 <tr>
                   <td style="background-color: #dc2626; padding: 10px 18px;">
@@ -262,3 +262,4 @@ export function generateBirthdayEmailHtml(
 
   return { subject, html, text: plainText };
 }
+

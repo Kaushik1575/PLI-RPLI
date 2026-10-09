@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
@@ -195,7 +195,7 @@ function buildBirthdayEmailHtml(policyholder) {
                 🎉 We are truly delighted to wish you a very <strong>Happy Birthday</strong> on this joyous occasion! May your day be blessed with vibrant joy, sound health, and peace of mind. 🎂
               </p>
 
-              <!-- Distinctive Policy & Milestone Card -->
+                            <!-- Distinctive Policy & Milestone Card -->
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background: linear-gradient(180deg, #fdf8f6 0%, #fef2f2 100%); border: 1px solid #fecaca; border-radius: 14px; margin: 24px 0; overflow: hidden;">
                 <tr>
                   <td style="background-color: #dc2626; padding: 10px 18px;">
@@ -463,7 +463,7 @@ app.get('/api/status', (req, res) => {
 });
 
 // Trigger 6 AM check immediately on demand
-app.post('/api/trigger-birthday-check', async (req, res) => {
+app.all('/api/trigger-birthday-check', async (req, res) => {
   const result = await executeDailyBirthdayCheck();
   res.json(result);
 });
@@ -479,3 +479,5 @@ app.listen(PORT, () => {
     executeDailyBirthdayCheck();
   }, 2000);
 });
+
+
