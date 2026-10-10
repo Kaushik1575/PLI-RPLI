@@ -90,6 +90,7 @@ export async function fetchPolicyholdersFromSupabase(url: string, anonKey: strin
       email: row.email,
       policy_opening_date: row.policy_opening_date || '',
       phone: row.phone || '',
+      last_birthday_wish_sent: row.last_birthday_wish_sent || undefined,
       sum_assured: 500000,
       premium_amount: 2000,
       premium_frequency: 'Monthly',

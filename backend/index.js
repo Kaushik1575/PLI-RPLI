@@ -378,11 +378,23 @@ export async function executeDailyBirthdayCheck() {
     let dispatchedCount = 0;
 
     for (const person of todayBirthdays) {
-      // Check if already sent today to prevent duplicate emails
-      if (person.last_birthday_wish_sent && person.last_birthday_wish_sent.startsWith(todayIsoDate)) {
-        console.log(`⏩ Skipping ${person.name} (${person.email}): already sent greeting today at ${person.last_birthday_wish_sent}.`);
-        continue;
+      // Check if already sent today in IST to prevent duplicate emails
+      if (person.last_birthday_wish_sent) {
+        try {
+          const sentDate = new Date(person.last_birthday_wish_sent);
+          const sentIst = sentDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+          if (sentIst === istDateStr || person.last_birthday_wish_sent.startsWith(istDateStr)) {
+            console.log(`⏩ Skipping ${person.name} (${person.email}): already sent greeting today at ${person.last_birthday_wish_sent}.`);
+            continue;
+          }
+        } catch (e) {
+          if (person.last_birthday_wish_sent.startsWith(istDateStr)) {
+            console.log(`⏩ Skipping ${person.name} (${person.email}): already sent greeting today at ${person.last_birthday_wish_sent}.`);
+            continue;
+          }
+        }
       }
+
 
       const { subject, html } = buildBirthdayEmailHtml(person);
 

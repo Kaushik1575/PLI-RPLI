@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PostalAgentMainView } from './components/PostalAgentMainView';
 import { EmailPreviewModal } from './components/EmailPreviewModal';
 import { ScratchCelebrationModal } from './components/ScratchCelebrationModal';
@@ -113,29 +113,38 @@ export const App: React.FC = () => {
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
   // Scratch Card Celebration Modal
   const [scratchClient, setScratchClient] = useState<Client | null>(null);
+  const [isSupabaseSynced, setIsSupabaseSynced] = useState(false);
 
   // Two-way sync: fetches all policyholders from Supabase and automatically pushes any local-only clients to Supabase
   useEffect(() => {
     if (supabaseConfig.is_connected && supabaseConfig.url && supabaseConfig.anon_key) {
-      fetchPolicyholdersFromSupabase(supabaseConfig.url, supabaseConfig.anon_key).then(async (serverData) => {
-        if (serverData) {
-          const serverPolicyNos = new Set(serverData.map(c => c.policy_number.toUpperCase()));
-          const localOnly = clients.filter(c => !serverPolicyNos.has(c.policy_number.toUpperCase()));
+      fetchPolicyholdersFromSupabase(supabaseConfig.url, supabaseConfig.anon_key)
+        .then(async (serverData) => {
+          if (serverData && serverData.length > 0) {
+            const serverPolicyNos = new Set(serverData.map(c => c.policy_number.toUpperCase()));
+            const localOnly = clients.filter(c => !serverPolicyNos.has(c.policy_number.toUpperCase()));
 
-          if (localOnly.length > 0) {
-            console.log(`Auto-uploading ${localOnly.length} local-only policyholders to Supabase...`);
-            for (const localClient of localOnly) {
-              await insertPolicyholderToSupabase(supabaseConfig.url, supabaseConfig.anon_key, localClient);
+            if (localOnly.length > 0) {
+              console.log(`Auto-uploading ${localOnly.length} local-only policyholders to Supabase...`);
+              for (const localClient of localOnly) {
+                await insertPolicyholderToSupabase(supabaseConfig.url, supabaseConfig.anon_key, localClient);
+              }
+              const refreshed = await fetchPolicyholdersFromSupabase(supabaseConfig.url, supabaseConfig.anon_key);
+              setClients(refreshed);
+              localStorage.setItem('dakpost_clients_v2', JSON.stringify(refreshed));
+            } else {
+              setClients(serverData);
+              localStorage.setItem('dakpost_clients_v2', JSON.stringify(serverData));
             }
-            const refreshed = await fetchPolicyholdersFromSupabase(supabaseConfig.url, supabaseConfig.anon_key);
-            setClients(refreshed);
-            localStorage.setItem('dakpost_clients_v2', JSON.stringify(refreshed));
-          } else {
-            setClients(serverData);
-            localStorage.setItem('dakpost_clients_v2', JSON.stringify(serverData));
           }
-        }
-      });
+          setIsSupabaseSynced(true);
+        })
+        .catch(err => {
+          console.error('Supabase initial fetch failed:', err);
+          setIsSupabaseSynced(true);
+        });
+    } else {
+      setIsSupabaseSynced(true);
     }
   }, [supabaseConfig.is_connected, supabaseConfig.url, supabaseConfig.anon_key]);
 
@@ -147,13 +156,13 @@ export const App: React.FC = () => {
   };
 
   // =====================================================================
-  // CONTINUOUS 2-MINUTE AUTOMATIC DISPATCHER TIMER
+  // CONTINUOUS 2-MINUTE AUTOMATIC DISPATCHER TIMER (STRICT ONCE-ONLY GUARANTEE)
   // Automatically scans every 2 minutes for pending birthdays today
   // =====================================================================
   const isAutoDispatchingRef = useRef(false);
 
   useEffect(() => {
-    if (!resendConfig.api_key || clients.length === 0 || agent.auto_send_enabled === false) return;
+    if (!isSupabaseSynced || !resendConfig.api_key || clients.length === 0 || agent.auto_send_enabled === false) return;
 
     const checkAndDispatchPendingBirthdays = async () => {
       if (isAutoDispatchingRef.current) return;
@@ -162,20 +171,45 @@ export const App: React.FC = () => {
       const now = new Date();
       const todayIsoDate = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
+      // Helper to check if a policyholder was already sent their wish today (multi-layer lock)
+      const isAlreadySentToday = (c: Client): boolean => {
+        // 1. LocalStorage lock (prevents re-sending on immediate page reloads)
+        if (localStorage.getItem(`dakpost_sent_${c.id}_${todayIsoDate}`) === 'true') {
+          return true;
+        }
+
+        // 2. Database/Memory timestamp check in Indian Standard Time
+        if (c.last_birthday_wish_sent) {
+          try {
+            const sentDate = new Date(c.last_birthday_wish_sent);
+            const sentIst = sentDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+            if (sentIst === todayIsoDate) return true;
+          } catch (e) {
+            if (c.last_birthday_wish_sent.startsWith(todayIsoDate)) return true;
+          }
+        }
+
+        return false;
+      };
+
       // Find any celebrants today who have NOT yet been sent a greeting today
       const pendingCelebrants = clients.filter(c => {
         const isToday = isBirthdayToday(c.date_of_birth);
-        const alreadySentToday = c.last_birthday_wish_sent && c.last_birthday_wish_sent.startsWith(todayIsoDate);
-        return isToday && !alreadySentToday;
+        return isToday && !isAlreadySentToday(c);
       });
 
       if (pendingCelebrants.length === 0) return;
 
       isAutoDispatchingRef.current = true;
-      console.log(`🎂 [Auto-Scheduler (2-Min Periodic Check)] Found ${pendingCelebrants.length} pending birthday(s) for ${todayIsoDate}. Auto-dispatching...`);
-      showToast(`🎂 Auto-Scheduler: Automatically dispatching ${pendingCelebrants.length} birthday wish(es)...`, 'info');
+      console.log(`🎂 [Auto-Scheduler] Found ${pendingCelebrants.length} pending birthday(s) for ${todayIsoDate}. Auto-dispatching once...`);
 
       for (const client of pendingCelebrants) {
+        // Double-check lock before dispatching
+        if (isAlreadySentToday(client)) continue;
+
+        // Immediate local lock to guarantee no repeat sends
+        localStorage.setItem(`dakpost_sent_${client.id}_${todayIsoDate}`, 'true');
+
         try {
           const res = await sendBirthdayEmail(client, agent, activeTemplate, resendConfig);
           const sentTimestamp = new Date().toISOString();
@@ -201,11 +235,14 @@ export const App: React.FC = () => {
               await updateBirthdayWishSentInSupabase(supabaseConfig.url, supabaseConfig.anon_key, client.id);
             }
             setClients(prev => prev.map(item => item.id === client.id ? { ...item, last_birthday_wish_sent: sentTimestamp } : item));
-            showToast(`🎉 Auto-Scheduler: Sent birthday wish to ${client.name} (${client.email})!`, 'success');
+            showToast(`🎉 Sent birthday wish to ${client.name} (${client.email})!`, 'success');
           } else {
+            // Unlock on failure so it can retry later
+            localStorage.removeItem(`dakpost_sent_${client.id}_${todayIsoDate}`);
             showToast(`⚠️ Auto-send failed for ${client.name}: ${res.error}`, 'error');
           }
         } catch (err: any) {
+          localStorage.removeItem(`dakpost_sent_${client.id}_${todayIsoDate}`);
           console.error('Auto-dispatch error:', err);
         }
       }
@@ -213,7 +250,7 @@ export const App: React.FC = () => {
       isAutoDispatchingRef.current = false;
     };
 
-    // 1. Run check immediately
+    // 1. Run check immediately once Supabase sync is verified
     checkAndDispatchPendingBirthdays();
 
     // 2. Set continuous 2-minute recurring interval (120,000 ms)
@@ -222,7 +259,7 @@ export const App: React.FC = () => {
     }, 2 * 60 * 1000);
 
     return () => clearInterval(intervalTimer);
-  }, [clients, resendConfig, agent, activeTemplate, supabaseConfig]);
+  }, [isSupabaseSynced, clients, resendConfig, agent, activeTemplate, supabaseConfig]);
 
   // Sync to localStorage
   useEffect(() => {

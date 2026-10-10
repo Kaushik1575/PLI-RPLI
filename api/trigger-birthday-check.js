@@ -253,10 +253,22 @@ export default async function handler(req, res) {
 
     for (const person of todayBirthdays) {
       // Prevent duplicates if already sent today in IST
-      if (person.last_birthday_wish_sent && person.last_birthday_wish_sent.startsWith(istDateStr)) {
-        results.push({ name: person.name, email: person.email, status: 'already_sent_today' });
-        continue;
+      if (person.last_birthday_wish_sent) {
+        try {
+          const sentDate = new Date(person.last_birthday_wish_sent);
+          const sentIst = sentDate.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+          if (sentIst === istDateStr || person.last_birthday_wish_sent.startsWith(istDateStr)) {
+            results.push({ name: person.name, email: person.email, status: 'already_sent_today' });
+            continue;
+          }
+        } catch (e) {
+          if (person.last_birthday_wish_sent.startsWith(istDateStr)) {
+            results.push({ name: person.name, email: person.email, status: 'already_sent_today' });
+            continue;
+          }
+        }
       }
+
 
       const { subject, html } = buildBirthdayEmailHtml(person);
 
