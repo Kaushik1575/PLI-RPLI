@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import cron from 'node-cron';
 import dotenv from 'dotenv';
@@ -343,10 +343,10 @@ export async function executeDailyBirthdayCheck() {
   }
 
   try {
-    const today = new Date();
-    const currentMonth = today.getMonth() + 1;
-    const currentDay = today.getDate();
-    const todayIsoDate = today.toISOString().split('T')[0];
+    // Current date strictly in Indian Standard Time (IST)
+    const now = new Date();
+    const istDateStr = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' }); // YYYY-MM-DD
+    const [todayYear, todayMonth, todayDay] = istDateStr.split('-').map(Number);
 
     // Query policyholders from the single table
     const { data: policyholders, error } = await supabase
@@ -363,14 +363,17 @@ export async function executeDailyBirthdayCheck() {
       return { success: true, count: 0, dispatched: 0 };
     }
 
-    // Filter today's birthday celebrants
+    // Filter today's birthday celebrants (string split immune to timezone skew)
     const todayBirthdays = policyholders.filter(p => {
       if (!p.date_of_birth) return false;
-      const dob = new Date(p.date_of_birth);
-      return (dob.getMonth() + 1 === currentMonth) && (dob.getDate() === currentDay);
+      const parts = p.date_of_birth.split('-');
+      if (parts.length < 3) return false;
+      const dobMonth = parseInt(parts[1], 10);
+      const dobDay = parseInt(parts[2], 10);
+      return (dobMonth === todayMonth) && (dobDay === todayDay);
     });
 
-    console.log(`🎂 Found ${todayBirthdays.length} policyholder(s) celebrating a birthday today (${currentDay}/${currentMonth}).`);
+    console.log(`🎂 Found ${todayBirthdays.length} policyholder(s) celebrating a birthday today (${todayDay}/${todayMonth} in IST).`);
 
     let dispatchedCount = 0;
 
