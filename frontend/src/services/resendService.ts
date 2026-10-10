@@ -31,13 +31,17 @@ export async function sendBirthdayEmail(
     };
   }
 
-  // Real Resend API dispatch
+  // Real Resend API dispatch via server-side endpoint to prevent browser CORS block
   try {
     const sender = config.sender_email && config.sender_email !== 'onboarding@resend.dev'
       ? (config.sender_name ? `${config.sender_name} <${config.sender_email}>` : config.sender_email)
       : 'Amulya Kumar Das & Sasmita Das <onboarding@jitus.tech>';
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const apiUrl = (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port === '5173')
+      ? 'http://localhost:5000/api/send-email'
+      : '/api/send-email';
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${config.api_key}`,
@@ -57,7 +61,7 @@ export async function sendBirthdayEmail(
     if (!response.ok) {
       return {
         success: false,
-        error: data.message || `Resend Error: ${response.statusText}`,
+        error: data.error || data.message || `Server Error: ${response.statusText}`,
       };
     }
 
@@ -69,9 +73,10 @@ export async function sendBirthdayEmail(
   } catch (err: any) {
     return {
       success: false,
-      error: err.message || 'Network error while contacting Resend API',
+      error: err.message || 'Network error while contacting email dispatch API',
     };
   }
+
 }
 
 /**
@@ -96,7 +101,11 @@ export async function sendTestEmail(
       ? `${config.sender_name || 'Postal Agent'} <${config.sender_email}>`
       : 'Amulya Kumar Das & Sasmita Das <onboarding@jitus.tech>';
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const apiUrl = (typeof window !== 'undefined' && window.location.hostname === 'localhost' && window.location.port === '5173')
+      ? 'http://localhost:5000/api/send-email'
+      : '/api/send-email';
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${config.api_key}`,
@@ -120,9 +129,10 @@ export async function sendTestEmail(
     if (!response.ok) {
       return {
         success: false,
-        error: data.message || `Resend HTTP error ${response.status}`,
+        error: data.error || data.message || `Server HTTP error ${response.status}`,
       };
     }
+
 
     return {
       success: true,

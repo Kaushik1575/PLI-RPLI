@@ -471,6 +471,38 @@ app.all('/api/trigger-birthday-check', async (req, res) => {
   res.json(result);
 });
 
+// Send individual email (proxy to avoid client browser CORS)
+app.post('/api/send-email', async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const bearerKey = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : '';
+    const key = bearerKey || req.body?.api_key || RESEND_API_KEY;
+
+    if (!key) {
+      return res.status(400).json({ error: 'Resend API key missing' });
+    }
+
+    const { from, to, subject, html, text } = req.body;
+    const clientResend = new Resend(key);
+
+    const result = await clientResend.emails.send({
+      from: from || `${AGENT.name} <${RESEND_SENDER_EMAIL}>`,
+      to: Array.isArray(to) ? to : [to],
+      subject,
+      html,
+      text,
+    });
+
+    if (result.error) {
+      return res.status(400).json({ error: result.error.message || result.error });
+    }
+
+    res.json({ success: true, id: result.data?.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start Express Server
 app.listen(PORT, () => {
   console.log(`\n📮 DakPost PLI Backend Server listening on http://localhost:${PORT}`);
